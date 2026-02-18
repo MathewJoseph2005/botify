@@ -1,9 +1,12 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { authAPI, authHelpers } from '../utils/api';
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const successMessage = location.state?.message;
+  
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -64,6 +67,12 @@ const Login = () => {
         </div>
 
         <form className="space-y-6" onSubmit={handleSubmit}>
+          {successMessage && (
+            <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-lg">
+              {successMessage}
+            </div>
+          )}
+          
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
               {error}

@@ -45,19 +45,10 @@ const Signup = () => {
       const response = await authAPI.signup(signupData);
 
       if (response.data.success) {
-        // Store token and user info
-        authHelpers.setToken(response.data.token);
-        authHelpers.setUser(response.data.user);
-
-        // Redirect based on role
-        const roleId = response.data.user.role_id;
-        if (roleId === 1) {
-          navigate('/dashboard/admin');
-        } else if (roleId === 2) {
-          navigate('/dashboard/seller');
-        } else {
-          navigate('/dashboard/buyer');
-        }
+        // Redirect to login page with success message
+        navigate('/login', { 
+          state: { message: 'Account created successfully! Please sign in.' } 
+        });
       }
     } catch (err) {
       setError(
