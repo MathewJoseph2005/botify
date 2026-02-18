@@ -138,7 +138,6 @@ const Signup = () => {
             >
               <option value="buyer">Buy Bots (Buyer)</option>
               <option value="seller">Sell Bots (Seller)</option>
-              <option value="admin">Manage Platform (Admin)</option>
             </select>
           </div>
 

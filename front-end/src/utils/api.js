@@ -31,6 +31,14 @@ export const authAPI = {
   verify: () => api.get('/auth/verify'),
 };
 
+// Admin API
+export const adminAPI = {
+  getUsers: () => api.get('/auth/users'),
+  updateUser: (userId, userData) => api.put(`/auth/users/${userId}`, userData),
+  banUser: (userId, is_banned) => api.patch(`/auth/users/${userId}/ban`, { is_banned }),
+  deleteUser: (userId) => api.delete(`/auth/users/${userId}`),
+};
+
 // Auth helper functions
 export const authHelpers = {
   setToken: (token) => localStorage.setItem('token', token),

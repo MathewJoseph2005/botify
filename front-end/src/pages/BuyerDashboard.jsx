@@ -75,7 +75,7 @@ const BuyerDashboard = () => {
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900">Quick Actions</h2>
           </div>
-          <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-6 grid grid-cols-1 md:grid-cols-4 gap-4">
             <button className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg transition duration-200">
               Browse Marketplace
             </button>
@@ -85,42 +85,138 @@ const BuyerDashboard = () => {
             <button className="bg-yellow-600 hover:bg-yellow-700 text-white px-6 py-3 rounded-lg transition duration-200">
               Favorites
             </button>
+            <button className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition duration-200">
+              Support
+            </button>
           </div>
         </div>
 
-        {/* My Bots */}
+        {/* My Purchased Bots Table */}
         <div className="bg-white rounded-lg shadow mb-8">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900">My Purchased Bots</h2>
           </div>
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3].map((item) => (
-                <div key={item} className="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition duration-200">
-                  <div className="flex items-start justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Customer Support Bot</h3>
-                    <span className="px-2 py-1 text-xs font-medium text-green-600 bg-green-100 rounded-full">
-                      Active
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Automated customer support for WhatsApp with AI-powered responses.
-                  </p>
-                  <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                    <span>Platform: WhatsApp</span>
-                    <span>Purchased: Jan 15, 2026</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <button className="flex-1 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition duration-200">
-                      Configure
-                    </button>
-                    <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition duration-200">
-                      Docs
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Bot Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Platform
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Seller
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Purchase Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {[
+                  { name: 'Customer Support Bot', platform: 'WhatsApp', seller: 'John Doe', date: 'Jan 15, 2026', status: 'Active' },
+                  { name: 'Marketing Automation', platform: 'Telegram', seller: 'Jane Smith', date: 'Jan 20, 2026', status: 'Active' },
+                  { name: 'Discord Moderator', platform: 'Discord', seller: 'Mike Wilson', date: 'Feb 01, 2026', status: 'Inactive' },
+                ].map((bot, index) => (
+                  <tr key={index}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{bot.name}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{bot.platform}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{bot.seller}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{bot.date}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        bot.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {bot.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <button className="text-primary-600 hover:text-primary-900 mr-4">Configure</button>
+                      <button className="text-blue-600 hover:text-blue-900">Support</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Purchase History Table */}
+        <div className="bg-white rounded-lg shadow mb-8">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-xl font-semibold text-gray-900">Purchase History</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Order ID
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Bot
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Amount
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Payment
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Receipt
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {[
+                  { id: 'ORD-001234', bot: 'Customer Support Bot', amount: '$49.99', date: 'Jan 15, 2026', payment: 'Completed' },
+                  { id: 'ORD-001233', bot: 'Marketing Automation', amount: '$79.99', date: 'Jan 20, 2026', payment: 'Completed' },
+                  { id: 'ORD-001232', bot: 'Discord Moderator', amount: '$39.99', date: 'Feb 01, 2026', payment: 'Completed' },
+                ].map((order, index) => (
+                  <tr key={index}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-primary-600">{order.id}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{order.bot}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{order.amount}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">{order.date}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                        {order.payment}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <button className="text-primary-600 hover:text-primary-900">Download</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -131,19 +227,21 @@ const BuyerDashboard = () => {
           </div>
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3].map((item) => (
-                <div key={item} className="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition duration-200">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Marketing Bot</h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Automated marketing campaigns for Telegram channels.
-                  </p>
+              {[
+                { name: 'Sales Bot Pro', desc: 'Automated sales funnel for WhatsApp', price: '$99.99', rating: '4.9', reviews: 120 },
+                { name: 'Social Manager', desc: 'Manage all social media from one bot', price: '$79.99', rating: '4.8', reviews: 85 },
+                { name: 'Analytics Bot', desc: 'Real-time analytics and reporting', price: '$59.99', rating: '4.7', reviews: 62 },
+              ].map((bot, index) => (
+                <div key={index} className="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition duration-200">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{bot.name}</h3>
+                  <p className="text-sm text-gray-600 mb-4">{bot.desc}</p>
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-lg font-bold text-primary-600">$79.99</span>
+                    <span className="text-lg font-bold text-primary-600">{bot.price}</span>
                     <div className="flex items-center">
                       <svg className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                       </svg>
-                      <span className="ml-1 text-sm text-gray-600">4.9 (120)</span>
+                      <span className="ml-1 text-sm text-gray-600">{bot.rating} ({bot.reviews})</span>
                     </div>
                   </div>
                   <button className="w-full bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition duration-200">
