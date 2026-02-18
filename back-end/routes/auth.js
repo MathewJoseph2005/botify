@@ -1,7 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import pool from '../config/database.js';
+import supabase from '../config/database.js';
 
 const router = express.Router();
 
@@ -36,12 +36,17 @@ router.post('/signup', async (req, res) => {
 
   try {
     // Check if user already exists
-    const userCheck = await pool.query(
-      'SELECT * FROM users WHERE email = $1',
-      [email.toLowerCase()]
-    );
+    const { data: existingUser, error: userCheckError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email.toLowerCase())
+      .maybeSingle();
 
-    if (userCheck.rows.length > 0) {
+    if (userCheckError && userCheckError.code !== 'PGRST116') {
+      throw userCheckError;
+    }
+
+    if (existingUser) {
       return res.status(409).json({ 
         success: false, 
         message: 'User with this email already exists.' 
@@ -49,33 +54,43 @@ router.post('/signup', async (req, res) => {
     }
 
     // Get role_id from role name
-    const roleQuery = await pool.query(
-      'SELECT role_id FROM roles WHERE role_name = $1',
-      [role.toLowerCase()]
-    );
+    const { data: roleData, error: roleError } = await supabase
+      .from('roles')
+      .select('role_id')
+      .eq('role_name', role.toLowerCase())
+      .single();
 
-    if (roleQuery.rows.length === 0) {
+    if (roleError || !roleData) {
       return res.status(400).json({ 
         success: false, 
         message: 'Invalid role. Must be admin, seller, or buyer.' 
       });
     }
 
-    const role_id = roleQuery.rows[0].role_id;
+    const role_id = roleData.role_id;
 
     // Hash password
     const saltRounds = 10;
     const password_hash = await bcrypt.hash(password, saltRounds);
 
     // Insert new user
-    const result = await pool.query(
-      `INSERT INTO users (name, email, password_hash, phone, role_id) 
-       VALUES ($1, $2, $3, $4, $5) 
-       RETURNING user_id, name, email, phone, role_id, created_at`,
-      [name, email.toLowerCase(), password_hash, phone || null, role_id]
-    );
+    const { data: newUser, error: insertError } = await supabase
+      .from('users')
+      .insert([
+        { 
+          name, 
+          email: email.toLowerCase(), 
+          password_hash, 
+          phone: phone || null, 
+          role_id 
+        }
+      ])
+      .select('user_id, name, email, phone, role_id, created_at')
+      .single();
 
-    const newUser = result.rows[0];
+    if (insertError) {
+      throw insertError;
+    }
 
     // Generate JWT
     const token = jwt.sign(
@@ -124,22 +139,26 @@ router.post('/login', async (req, res) => {
 
   try {
     // Find user by email
-    const result = await pool.query(
-      `SELECT u.user_id, u.name, u.email, u.password_hash, u.phone, u.role_id, r.role_name
-       FROM users u
-       JOIN roles r ON u.role_id = r.role_id
-       WHERE u.email = $1`,
-      [email.toLowerCase()]
-    );
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select(`
+        user_id,
+        name,
+        email,
+        password_hash,
+        phone,
+        role_id,
+        roles!inner (role_name)
+      `)
+      .eq('email', email.toLowerCase())
+      .single();
 
-    if (result.rows.length === 0) {
+    if (userError || !user) {
       return res.status(401).json({ 
         success: false, 
         message: 'Invalid email or password.' 
       });
     }
-
-    const user = result.rows[0];
 
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
@@ -172,7 +191,7 @@ router.post('/login', async (req, res) => {
         email: user.email,
         phone: user.phone,
         role_id: user.role_id,
-        role_name: user.role_name
+        role_name: user.roles.role_name
       }
     });
   } catch (error) {
@@ -199,15 +218,20 @@ router.get('/verify', async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
     // Fetch user details
-    const result = await pool.query(
-      `SELECT u.user_id, u.name, u.email, u.phone, u.role_id, r.role_name
-       FROM users u
-       JOIN roles r ON u.role_id = r.role_id
-       WHERE u.user_id = $1`,
-      [decoded.user_id]
-    );
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select(`
+        user_id,
+        name,
+        email,
+        phone,
+        role_id,
+        roles!inner (role_name)
+      `)
+      .eq('user_id', decoded.user_id)
+      .single();
 
-    if (result.rows.length === 0) {
+    if (userError || !user) {
       return res.status(404).json({ 
         success: false, 
         message: 'User not found.' 
@@ -216,7 +240,14 @@ router.get('/verify', async (req, res) => {
 
     res.status(200).json({
       success: true,
-      user: result.rows[0]
+      user: {
+        user_id: user.user_id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role_id: user.role_id,
+        role_name: user.roles.role_name
+      }
     });
   } catch (error) {
     res.status(401).json({ 

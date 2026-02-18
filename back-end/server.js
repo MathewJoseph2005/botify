@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
-import pool from './config/database.js';
+import './config/database.js'; // Initialize Supabase connection
 
 // Load environment variables
 dotenv.config();
@@ -61,9 +61,7 @@ app.listen(PORT, () => {
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM signal received: closing HTTP server');
-  pool.end(() => {
-    console.log('Database pool has ended');
-  });
+  process.exit(0);
 });
 
 export default app;
