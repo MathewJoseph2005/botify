@@ -8,19 +8,21 @@ import Marketplace from './pages/Marketplace';
 import AdminDashboard from './pages/AdminDashboard';
 import SellerDashboard from './pages/SellerDashboard';
 import BuyerDashboard from './pages/BuyerDashboard';
+import EmailBot from './pages/EmailBot';
+import CreateMarketplaceBotPage from './pages/CreateMarketplaceBotPage';
 import Unauthorized from './pages/Unauthorized';
-import { authHelpers } from './utils/api';
+import { useAuth } from './context/AuthContext';
 
 function App() {
+  const { user, loading, getRoleName } = useAuth();
+
   // Helper component to redirect to appropriate dashboard
   const DashboardRedirect = () => {
-    const user = authHelpers.getUser();
-    
     if (!user) {
       return <Navigate to="/login" replace />;
     }
 
-    const roleName = authHelpers.getRoleName(user.role_id);
+    const roleName = getRoleName(user.role_id);
     
     if (roleName === 'admin') {
       return <Navigate to="/dashboard/admin" replace />;
@@ -30,6 +32,14 @@ function App() {
       return <Navigate to="/dashboard/buyer" replace />;
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
 
   return (
     <Router>
@@ -68,6 +78,22 @@ function App() {
             element={
               <PrivateRoute allowedRoles={[3]}>
                 <BuyerDashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/email-bot"
+            element={
+              <PrivateRoute allowedRoles={[1, 2, 3]}>
+                <EmailBot />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/seller/create-bot"
+            element={
+              <PrivateRoute allowedRoles={[2]}>
+                <CreateMarketplaceBotPage />
               </PrivateRoute>
             }
           />

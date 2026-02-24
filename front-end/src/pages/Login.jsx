@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { authAPI, authHelpers } from '../utils/api';
+import { authAPI } from '../utils/api';
+import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { login } = useAuth();
   const successMessage = location.state?.message;
   
   const [formData, setFormData] = useState({
@@ -31,9 +33,8 @@ const Login = () => {
       const response = await authAPI.login(formData);
       
       if (response.data.success) {
-        // Store token and user info
-        authHelpers.setToken(response.data.token);
-        authHelpers.setUser(response.data.user);
+        // Store token and user info via auth context
+        login(response.data.token, response.data.user);
 
         // Redirect based on role
         const roleName = response.data.user.role_name;

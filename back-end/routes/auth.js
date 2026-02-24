@@ -54,6 +54,14 @@ router.post('/signup', async (req, res) => {
       });
     }
 
+    // Block admin self-registration
+    if (role.toLowerCase() === 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Admin accounts cannot be created via signup.'
+      });
+    }
+
     // Get role_id from role name
     const { data: roleData, error: roleError } = await supabase
       .from('roles')
@@ -64,7 +72,7 @@ router.post('/signup', async (req, res) => {
     if (roleError || !roleData) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Invalid role. Must be admin, seller, or buyer.' 
+        message: 'Invalid role. Must be seller or buyer.' 
       });
     }
 
@@ -149,6 +157,7 @@ router.post('/login', async (req, res) => {
         password_hash,
         phone,
         role_id,
+        is_banned,
         roles!inner (role_name)
       `)
       .eq('email', email.toLowerCase())
@@ -158,6 +167,14 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ 
         success: false, 
         message: 'Invalid email or password.' 
+      });
+    }
+
+    // Check if user is banned
+    if (user.is_banned) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account has been banned. Contact support for assistance.'
       });
     }
 

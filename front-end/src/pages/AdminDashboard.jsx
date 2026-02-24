@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { authHelpers, adminAPI } from '../utils/api';
+import { adminAPI } from '../utils/api';
+import { useAuth } from '../context/AuthContext';
 
 const AdminDashboard = () => {
-  const user = authHelpers.getUser();
+  const { user } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   

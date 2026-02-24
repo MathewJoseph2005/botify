@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 // Create axios instance
 const api = axios.create({
@@ -37,6 +37,34 @@ export const adminAPI = {
   updateUser: (userId, userData) => api.put(`/auth/users/${userId}`, userData),
   banUser: (userId, is_banned) => api.patch(`/auth/users/${userId}/ban`, { is_banned }),
   deleteUser: (userId) => api.delete(`/auth/users/${userId}`),
+};
+
+// Bot API
+export const botAPI = {
+  listBots: () => api.get('/bot/list'),
+  createBot: (botData) => api.post('/bot/create', botData),
+  updateBot: (botId, botData) => api.put(`/bot/update/${botId}`, botData),
+  deleteBot: (botId) => api.delete(`/bot/delete/${botId}`),
+  testConnection: (botId) => api.post(`/bot/test-connection/${botId}`),
+  emailCampaign: (botId, formData) => api.post(`/bot/email-campaign/${botId}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+};
+
+// Marketplace API
+export const marketplaceAPI = {
+  // Seller endpoints
+  createListing: (data) => api.post('/marketplace/create', data),
+  getMyListings: () => api.get('/marketplace/my-listings'),
+  updateListing: (id, data) => api.put(`/marketplace/update/${id}`, data),
+  deleteListing: (id) => api.delete(`/marketplace/delete/${id}`),
+  publishListing: (id, publish) => api.patch(`/marketplace/publish/${id}`, { publish }),
+
+  // Public / Buyer endpoints
+  browse: (params) => api.get('/marketplace/browse', { params }),
+  getDetails: (id) => api.get(`/marketplace/details/${id}`),
+  purchase: (id) => api.post(`/marketplace/purchase/${id}`),
+  getMyPurchases: () => api.get('/marketplace/my-purchases'),
 };
 
 // Auth helper functions
