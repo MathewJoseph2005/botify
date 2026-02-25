@@ -37,6 +37,13 @@ export const adminAPI = {
   updateUser: (userId, userData) => api.put(`/auth/users/${userId}`, userData),
   banUser: (userId, is_banned) => api.patch(`/auth/users/${userId}/ban`, { is_banned }),
   deleteUser: (userId) => api.delete(`/auth/users/${userId}`),
+  // New admin endpoints
+  getStats: () => api.get('/admin/stats'),
+  getMarketplaceListings: () => api.get('/admin/marketplace-listings'),
+  updateListingStatus: (id, status) => api.patch(`/admin/marketplace-listings/${id}/status`, { status }),
+  deleteListing: (id) => api.delete(`/admin/marketplace-listings/${id}`),
+  getPurchases: () => api.get('/admin/purchases'),
+  getEmailBots: () => api.get('/admin/email-bots'),
 };
 
 // Bot API
