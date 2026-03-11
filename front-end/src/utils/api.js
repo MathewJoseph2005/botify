@@ -28,6 +28,7 @@ api.interceptors.request.use(
 export const authAPI = {
   signup: (userData) => api.post('/auth/signup', userData),
   login: (credentials) => api.post('/auth/login', credentials),
+  googleSignIn: (body) => api.post('/auth/google', body),
   verify: () => api.get('/auth/verify'),
 };
 

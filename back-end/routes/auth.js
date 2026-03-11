@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import supabase from '../config/database.js';
 import verifyToken from '../middleware/auth.js';
+import crypto from 'crypto';
 
 const router = express.Router();
 
@@ -486,3 +487,104 @@ router.delete('/users/:userId', verifyToken, async (req, res) => {
 });
 
 export default router;
+
+// Google OAuth token verification endpoint
+// Expects { id_token } from client (Google Identity Services)
+router.post('/google', async (req, res) => {
+  const { id_token } = req.body;
+
+  if (!id_token) {
+    return res.status(400).json({ success: false, message: 'id_token is required.' });
+  }
+
+  try {
+    // Verify ID token with Google tokeninfo endpoint
+    const resp = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(id_token)}`);
+    if (!resp.ok) {
+      const txt = await resp.text().catch(() => '');
+      console.error('Google tokeninfo error:', resp.status, txt);
+      return res.status(401).json({ success: false, message: 'Invalid Google ID token.' });
+    }
+
+    const payload = await resp.json();
+    const { email, email_verified, name } = payload;
+
+    if (!email || email_verified !== 'true' && email_verified !== true) {
+      return res.status(400).json({ success: false, message: 'Google account email not verified.' });
+    }
+
+    // Check if user exists
+    const { data: existingUser, error: userErr } = await supabase
+      .from('users')
+      .select('user_id, name, email, phone, role_id, is_banned, roles!inner(role_name)')
+      .eq('email', email.toLowerCase())
+      .maybeSingle();
+
+    if (userErr && userErr.code !== 'PGRST116') {
+      throw userErr;
+    }
+
+    if (existingUser) {
+      if (existingUser.is_banned) {
+        return res.status(403).json({ success: false, message: 'Your account is banned.' });
+      }
+
+      const token = jwt.sign(
+        { user_id: existingUser.user_id, role_id: existingUser.role_id, email: existingUser.email },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+
+      return res.status(200).json({ success: true, token, user: {
+        user_id: existingUser.user_id,
+        name: existingUser.name,
+        email: existingUser.email,
+        phone: existingUser.phone,
+        role_id: existingUser.role_id,
+        role_name: existingUser.roles?.role_name || 'buyer'
+      }});
+    }
+
+    // Create new user: find buyer role id
+    const { data: buyerRole, error: roleErr } = await supabase
+      .from('roles')
+      .select('role_id')
+      .eq('role_name', 'buyer')
+      .single();
+
+    const role_id = (buyerRole && buyerRole.role_id) ? buyerRole.role_id : 3;
+
+    // Generate a random password hash to satisfy NOT NULL constraint
+    const randomPassword = crypto.randomBytes(16).toString('hex');
+    const saltRounds = 10;
+    const password_hash = await bcrypt.hash(randomPassword, saltRounds);
+
+    const { data: newUser, error: insertErr } = await supabase
+      .from('users')
+      .insert([{ name: name || email.split('@')[0], email: email.toLowerCase(), password_hash, phone: null, role_id }])
+      .select('user_id, name, email, phone, role_id')
+      .single();
+
+    if (insertErr) {
+      throw insertErr;
+    }
+
+    const token = jwt.sign(
+      { user_id: newUser.user_id, role_id: newUser.role_id, email: newUser.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    return res.status(201).json({ success: true, token, user: {
+      user_id: newUser.user_id,
+      name: newUser.name,
+      email: newUser.email,
+      phone: newUser.phone,
+      role_id: newUser.role_id,
+      role_name: 'buyer'
+    }});
+  } catch (error) {
+    console.error('Google auth error:', error);
+    res.status(500).json({ success: false, message: 'Google authentication failed.' });
+  }
+});

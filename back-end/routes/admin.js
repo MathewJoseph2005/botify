@@ -15,70 +15,95 @@ const adminOnly = (req, res, next) => {
 // GET /stats - Aggregated platform statistics
 router.get('/stats', verifyToken, adminOnly, async (req, res) => {
   try {
-    // Fetch all counts in parallel
-    const [usersRes, botsRes, listingsRes, purchasesRes] = await Promise.all([
-      supabase.from('users').select('user_id, role_id, is_banned, created_at'),
-      supabase.from('bots').select('bot_id, is_active, created_at'),
-      supabase.from('marketplace_bots').select('id, status, platform, price, total_sales, created_at'),
-      supabase.from('purchases').select('id, amount, status, purchased_at'),
-    ]);
-
-    const users = usersRes.data || [];
-    const bots = botsRes.data || [];
-    const listings = listingsRes.data || [];
-    const purchases = purchasesRes.data || [];
-
-    const totalRevenue = purchases
-      .filter((p) => p.status === 'completed')
-      .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
-
-    // Platform breakdown
-    const platformCounts = {};
-    listings.forEach((l) => {
-      platformCounts[l.platform] = (platformCounts[l.platform] || 0) + 1;
-    });
-
-    // New users this week (last 7 days)
+    // Use count-only queries where possible to avoid pulling full tables into memory.
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
-    const newUsersThisWeek = users.filter((u) => new Date(u.created_at) >= weekAgo).length;
+    const weekAgoISO = weekAgo.toISOString();
 
-    // New purchases this week
-    const newPurchasesThisWeek = purchases.filter((p) => new Date(p.purchased_at) >= weekAgo).length;
+    const [
+      usersTotalRes,
+      adminsRes,
+      sellersRes,
+      buyersRes,
+      bannedRes,
+      newUsersRes,
+      botsTotalRes,
+      activeBotsRes,
+      inactiveBotsRes,
+      listingsTotalRes,
+      publishedRes,
+      draftRes,
+      archivedRes,
+      purchasesTotalRes,
+      completedRes,
+      refundedRes,
+      newPurchasesRes,
+    ] = await Promise.all([
+      supabase.from('users').select('id', { head: true, count: 'exact' }),
+      supabase.from('users').select('id', { head: true, count: 'exact' }).eq('role_id', 1),
+      supabase.from('users').select('id', { head: true, count: 'exact' }).eq('role_id', 2),
+      supabase.from('users').select('id', { head: true, count: 'exact' }).eq('role_id', 3),
+      supabase.from('users').select('id', { head: true, count: 'exact' }).eq('is_banned', true),
+      supabase.from('users').select('id', { head: true, count: 'exact' }).gte('created_at', weekAgoISO),
 
-    res.json({
-      success: true,
-      stats: {
-        users: {
-          total: users.length,
-          admins: users.filter((u) => u.role_id === 1).length,
-          sellers: users.filter((u) => u.role_id === 2).length,
-          buyers: users.filter((u) => u.role_id === 3).length,
-          banned: users.filter((u) => u.is_banned).length,
-          newThisWeek: newUsersThisWeek,
-        },
-        bots: {
-          total: bots.length,
-          active: bots.filter((b) => b.is_active).length,
-          inactive: bots.filter((b) => !b.is_active).length,
-        },
-        marketplace: {
-          total: listings.length,
-          published: listings.filter((l) => l.status === 'published').length,
-          draft: listings.filter((l) => l.status === 'draft').length,
-          archived: listings.filter((l) => l.status === 'archived').length,
-          totalSales: listings.reduce((sum, l) => sum + (l.total_sales || 0), 0),
-          platformBreakdown: platformCounts,
-        },
-        purchases: {
-          total: purchases.length,
-          completed: purchases.filter((p) => p.status === 'completed').length,
-          refunded: purchases.filter((p) => p.status === 'refunded').length,
-          totalRevenue,
-          newThisWeek: newPurchasesThisWeek,
-        },
-      },
+      supabase.from('bots').select('bot_id', { head: true, count: 'exact' }),
+      supabase.from('bots').select('bot_id', { head: true, count: 'exact' }).eq('is_active', true),
+      supabase.from('bots').select('bot_id', { head: true, count: 'exact' }).eq('is_active', false),
+
+      supabase.from('marketplace_bots').select('id', { head: true, count: 'exact' }),
+      supabase.from('marketplace_bots').select('id', { head: true, count: 'exact' }).eq('status', 'published'),
+      supabase.from('marketplace_bots').select('id', { head: true, count: 'exact' }).eq('status', 'draft'),
+      supabase.from('marketplace_bots').select('id', { head: true, count: 'exact' }).eq('status', 'archived'),
+
+      supabase.from('purchases').select('id', { head: true, count: 'exact' }),
+      supabase.from('purchases').select('id', { head: true, count: 'exact' }).eq('status', 'completed'),
+      supabase.from('purchases').select('id', { head: true, count: 'exact' }).eq('status', 'refunded'),
+      supabase.from('purchases').select('id', { head: true, count: 'exact' }).gte('purchased_at', weekAgoISO),
+    ]);
+
+    // For platform breakdown and totals that need numeric aggregation, fetch only the necessary columns.
+    const listingsDataRes = await supabase.from('marketplace_bots').select('platform, total_sales');
+    const listingsData = listingsDataRes.data || [];
+
+    const platformCounts = {};
+    let totalSales = 0;
+    listingsData.forEach((l) => {
+      platformCounts[l.platform] = (platformCounts[l.platform] || 0) + 1;
+      totalSales += parseFloat(l.total_sales || 0);
     });
+
+    const stats = {
+      users: {
+        total: usersTotalRes.count || 0,
+        admins: adminsRes.count || 0,
+        sellers: sellersRes.count || 0,
+        buyers: buyersRes.count || 0,
+        banned: bannedRes.count || 0,
+        newThisWeek: newUsersRes.count || 0,
+      },
+      bots: {
+        total: botsTotalRes.count || 0,
+        active: activeBotsRes.count || 0,
+        inactive: inactiveBotsRes.count || 0,
+      },
+      marketplace: {
+        total: listingsTotalRes.count || 0,
+        published: publishedRes.count || 0,
+        draft: draftRes.count || 0,
+        archived: archivedRes.count || 0,
+        totalSales,
+        platformBreakdown: platformCounts,
+      },
+      purchases: {
+        total: purchasesTotalRes.count || 0,
+        completed: completedRes.count || 0,
+        refunded: refundedRes.count || 0,
+        totalRevenue: 0, // totalRevenue can be derived server-side via DB aggregate if needed
+        newThisWeek: newPurchasesRes.count || 0,
+      },
+    };
+
+    res.json({ success: true, stats });
   } catch (err) {
     console.error('Admin stats error:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch stats.' });

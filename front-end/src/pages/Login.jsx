@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { authAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
@@ -54,6 +54,61 @@ const Login = () => {
       setLoading(false);
     }
   };
+
+  // Google Identity Services
+  const [googleReady, setGoogleReady] = useState(false);
+  useEffect(() => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (!clientId) return;
+
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    document.body.appendChild(script);
+
+    script.onload = () => {
+      if (window.google && window.google.accounts && clientId) {
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: async (response) => {
+            const id_token = response?.credential;
+            if (!id_token) return;
+            setLoading(true);
+            try {
+              const res = await authAPI.googleSignIn({ id_token });
+              if (res.data.success) {
+                login(res.data.token, res.data.user);
+                const roleName = res.data.user.role_name;
+                if (roleName === 'admin') navigate('/dashboard/admin');
+                else if (roleName === 'seller') navigate('/dashboard/seller');
+                else navigate('/dashboard/buyer');
+              }
+            } catch (err) {
+              setError(err.response?.data?.message || 'Google sign-in failed.');
+            } finally {
+              setLoading(false);
+            }
+          }
+        });
+
+        // Render button into container
+        const container = document.getElementById('googleSignInDiv');
+        if (container) {
+          window.google.accounts.id.renderButton(container, { theme: 'outline', size: 'large' });
+        }
+        setGoogleReady(true);
+      }
+    };
+
+    script.onerror = () => {
+      setError('Failed to load Google Identity Services script.');
+    };
+
+    return () => {
+      if (script && script.parentNode) script.parentNode.removeChild(script);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -141,6 +196,7 @@ const Login = () => {
           </button>
 
           <div className="text-center">
+            <div id="googleSignInDiv" className="flex justify-center mb-3" />
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}
               <Link to="/signup" className="font-medium text-primary-600 hover:text-primary-500">
