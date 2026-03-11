@@ -436,7 +436,13 @@ router.post('/email-campaign/:botId', verifyToken, uploadFields, async (req, res
     }
 
     // ---- Build the mail sending function ----
-    const sendCampaign = async () => {
+    const sendCampaign = async (campaignId) => {
+      // Mark campaign as sending
+      await supabase
+        .from('email_campaigns')
+        .update({ status: 'sending', started_at: new Date().toISOString() })
+        .eq('id', campaignId);
+
       const transporter = createTransporter(process.env.BOT_EMAIL, process.env.BOT_PASSWORD);
 
       const mailOptions = {
@@ -470,6 +476,17 @@ router.post('/email-campaign/:botId', verifyToken, uploadFields, async (req, res
       cleanupFile(excelPath);
       if (attachmentFile) cleanupFile(attachmentFile.path);
 
+      // Update campaign record with results
+      await supabase
+        .from('email_campaigns')
+        .update({
+          sent_count: sent,
+          failed_count: failed,
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', campaignId);
+
       console.log(`[Email Campaign] Bot: ${bot.bot_name} – sent: ${sent}, failed: ${failed}`);
     };
 
@@ -486,7 +503,26 @@ router.post('/email-campaign/:botId', verifyToken, uploadFields, async (req, res
         });
       }
 
-      schedule.scheduleJob(scheduledDate, sendCampaign);
+      // Create campaign record for scheduled send
+      const { data: campaign, error: campaignErr } = await supabase
+        .from('email_campaigns')
+        .insert({
+          user_id: req.user.user_id,
+          bot_id: parseInt(botId),
+          bot_name: bot.bot_name,
+          subject,
+          recipient_count: emails.length,
+          status: 'scheduled',
+          scheduled_for: scheduledDate.toISOString(),
+        })
+        .select('id')
+        .single();
+
+      if (campaignErr) {
+        console.error('Failed to create campaign record:', campaignErr);
+      }
+
+      schedule.scheduleJob(scheduledDate, () => sendCampaign(campaign?.id));
 
       return res.status(200).json({
         success: true,
@@ -494,23 +530,107 @@ router.post('/email-campaign/:botId', verifyToken, uploadFields, async (req, res
         recipientCount: emails.length,
         scheduledFor: scheduledDate.toISOString(),
         botName: bot.bot_name,
+        campaignId: campaign?.id,
       });
     }
 
+    // Create campaign record for immediate send
+    const { data: campaign, error: campaignErr } = await supabase
+      .from('email_campaigns')
+      .insert({
+        user_id: req.user.user_id,
+        bot_id: parseInt(botId),
+        bot_name: bot.bot_name,
+        subject,
+        recipient_count: emails.length,
+        status: 'pending',
+      })
+      .select('id')
+      .single();
+
+    if (campaignErr) {
+      console.error('Failed to create campaign record:', campaignErr);
+    }
+
     // Send immediately (run in background, respond right away)
-    sendCampaign();
+    sendCampaign(campaign?.id);
 
     return res.status(200).json({
       success: true,
       message: `Campaign started with bot "${bot.bot_name}"! Sending to ${emails.length} recipient(s).`,
       recipientCount: emails.length,
       botName: bot.bot_name,
+      campaignId: campaign?.id,
     });
   } catch (err) {
     console.error('Email campaign error:', err);
     res.status(500).json({
       success: false,
       message: 'Failed to schedule campaign.',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined,
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/bot/campaigns
+// Retrieve campaign history for the authenticated user
+// ---------------------------------------------------------------------------
+router.get('/campaigns', verifyToken, async (req, res) => {
+  try {
+    const { data: campaigns, error } = await supabase
+      .from('email_campaigns')
+      .select('*')
+      .eq('user_id', req.user.user_id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    res.status(200).json({
+      success: true,
+      campaigns: campaigns || [],
+    });
+  } catch (err) {
+    console.error('Error fetching campaigns:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch campaign history.',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined,
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/bot/campaigns/:campaignId
+// Retrieve a single campaign's details
+// ---------------------------------------------------------------------------
+router.get('/campaigns/:campaignId', verifyToken, async (req, res) => {
+  const { campaignId } = req.params;
+
+  try {
+    const { data: campaign, error } = await supabase
+      .from('email_campaigns')
+      .select('*')
+      .eq('id', campaignId)
+      .eq('user_id', req.user.user_id)
+      .single();
+
+    if (error || !campaign) {
+      return res.status(404).json({
+        success: false,
+        message: 'Campaign not found.',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      campaign,
+    });
+  } catch (err) {
+    console.error('Error fetching campaign:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch campaign details.',
       error: process.env.NODE_ENV === 'development' ? err.message : undefined,
     });
   }

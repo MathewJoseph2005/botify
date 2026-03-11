@@ -1,8 +1,10 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 import supabase from '../config/database.js';
-import verifyToken from '../middleware/auth.js';
+import verifyToken, { isAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -275,17 +277,165 @@ router.get('/verify', async (req, res) => {
   }
 });
 
-// Get all users (Admin only)
-router.get('/users', verifyToken, async (req, res) => {
+// ==================== PASSWORD RESET ====================
+
+// Helper – create email transporter
+function createMailTransporter() {
+  const email = process.env.BOT_EMAIL;
+  const pass = process.env.BOT_PASSWORD;
+  if (!email || !pass) return null;
+
+  const domain = email.split('@')[1]?.toLowerCase();
+  let host = 'smtp.gmail.com';
+  let port = 465;
+  let secure = true;
+
+  if (domain?.includes('outlook') || domain?.includes('hotmail') || domain?.includes('live')) {
+    host = 'smtp-mail.outlook.com'; port = 587; secure = false;
+  } else if (domain?.includes('yahoo')) {
+    host = 'smtp.mail.yahoo.com';
+  }
+
+  return nodemailer.createTransport({ host, port, secure, auth: { user: email, pass } });
+}
+
+// POST /forgot-password – send a reset link via email
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ success: false, message: 'Email is required.' });
+  }
+
   try {
-    // Check if user is admin (role_id: 1)
-    if (req.user.role_id !== 1) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. Admin only.'
+    // Look up user
+    const { data: user, error: userErr } = await supabase
+      .from('users')
+      .select('user_id, name, email')
+      .eq('email', email.toLowerCase())
+      .maybeSingle();
+
+    // Always return success to prevent user enumeration
+    if (userErr || !user) {
+      return res.status(200).json({
+        success: true,
+        message: 'If that email exists, a reset link has been sent.',
       });
     }
 
+    // Generate a secure token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    // Invalidate previous tokens for this user
+    await supabase
+      .from('password_reset_tokens')
+      .update({ used: true })
+      .eq('user_id', user.user_id)
+      .eq('used', false);
+
+    // Store new token
+    const { error: insertErr } = await supabase
+      .from('password_reset_tokens')
+      .insert({
+        user_id: user.user_id,
+        token: resetToken,
+        expires_at: expiresAt.toISOString(),
+      });
+
+    if (insertErr) throw insertErr;
+
+    // Build reset URL
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
+
+    // Send email
+    const transporter = createMailTransporter();
+    if (transporter) {
+      await transporter.sendMail({
+        from: process.env.BOT_EMAIL,
+        to: user.email,
+        subject: 'Botify – Password Reset',
+        html: `
+          <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;border:1px solid #e5e7eb;border-radius:12px;">
+            <h2 style="color:#2563eb;">Botify Password Reset</h2>
+            <p>Hi <strong>${user.name}</strong>,</p>
+            <p>You requested a password reset. Click the button below to set a new password:</p>
+            <a href="${resetUrl}" style="display:inline-block;margin:16px 0;padding:12px 24px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold;">Reset Password</a>
+            <p style="color:#6b7280;font-size:14px;">This link expires in 1 hour. If you didn't request this, ignore this email.</p>
+          </div>
+        `,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'If that email exists, a reset link has been sent.',
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ success: false, message: 'Server error. Please try again later.' });
+  }
+});
+
+// POST /reset-password – verify token and set new password
+router.post('/reset-password', async (req, res) => {
+  const { token, password } = req.body;
+
+  if (!token || !password) {
+    return res.status(400).json({ success: false, message: 'Token and new password are required.' });
+  }
+
+  if (password.length < 6) {
+    return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long.' });
+  }
+
+  try {
+    // Find the token
+    const { data: resetRecord, error: tokenErr } = await supabase
+      .from('password_reset_tokens')
+      .select('*')
+      .eq('token', token)
+      .eq('used', false)
+      .single();
+
+    if (tokenErr || !resetRecord) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired reset link.' });
+    }
+
+    // Check expiry
+    if (new Date(resetRecord.expires_at) < new Date()) {
+      await supabase.from('password_reset_tokens').update({ used: true }).eq('id', resetRecord.id);
+      return res.status(400).json({ success: false, message: 'Reset link has expired. Please request a new one.' });
+    }
+
+    // Hash new password
+    const password_hash = await bcrypt.hash(password, 10);
+
+    // Update user password
+    const { error: updateErr } = await supabase
+      .from('users')
+      .update({ password_hash })
+      .eq('user_id', resetRecord.user_id);
+
+    if (updateErr) throw updateErr;
+
+    // Mark token as used
+    await supabase.from('password_reset_tokens').update({ used: true }).eq('id', resetRecord.id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Password reset successfully. You can now log in.',
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ success: false, message: 'Server error. Please try again later.' });
+  }
+});
+
+// Get all users (Admin only)
+router.get('/users', verifyToken, isAdmin, async (req, res) => {
+  try {
     const { data: users, error } = await supabase
       .from('users')
       .select(`
@@ -326,16 +476,8 @@ router.get('/users', verifyToken, async (req, res) => {
 });
 
 // Update user (Admin only)
-router.put('/users/:userId', verifyToken, async (req, res) => {
+router.put('/users/:userId', verifyToken, isAdmin, async (req, res) => {
   try {
-    // Check if user is admin
-    if (req.user.role_id !== 1) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. Admin only.'
-      });
-    }
-
     const { userId } = req.params;
     const { name, email, phone, role_id } = req.body;
 
@@ -390,16 +532,8 @@ router.put('/users/:userId', verifyToken, async (req, res) => {
 });
 
 // Ban/Unban user (Admin only)
-router.patch('/users/:userId/ban', verifyToken, async (req, res) => {
+router.patch('/users/:userId/ban', verifyToken, isAdmin, async (req, res) => {
   try {
-    // Check if user is admin
-    if (req.user.role_id !== 1) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. Admin only.'
-      });
-    }
-
     const { userId } = req.params;
     const { is_banned } = req.body;
 
@@ -443,16 +577,8 @@ router.patch('/users/:userId/ban', verifyToken, async (req, res) => {
 });
 
 // Delete user (Admin only)
-router.delete('/users/:userId', verifyToken, async (req, res) => {
+router.delete('/users/:userId', verifyToken, isAdmin, async (req, res) => {
   try {
-    // Check if user is admin
-    if (req.user.role_id !== 1) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. Admin only.'
-      });
-    }
-
     const { userId } = req.params;
 
     // Prevent admin from deleting themselves
@@ -482,6 +608,138 @@ router.delete('/users/:userId', verifyToken, async (req, res) => {
       success: false,
       message: 'Failed to delete user.'
     });
+  }
+});
+
+// ==================== ADMIN DASHBOARD DATA ====================
+
+// GET /admin/stats - Comprehensive platform stats (Admin only)
+router.get('/admin/stats', verifyToken, isAdmin, async (req, res) => {
+  try {
+    // Fetch all data in parallel
+    const [usersRes, botsRes, marketplaceRes, purchasesRes] = await Promise.all([
+      supabase.from('users').select('user_id, role_id, is_banned, created_at, roles(role_name)'),
+      supabase.from('bots').select('bot_id, is_active, created_at'),
+      supabase.from('marketplace_bots').select('id, platform, status, price, total_sales, created_at'),
+      supabase.from('purchases').select('id, amount, status, purchased_at'),
+    ]);
+
+    const users = usersRes.data || [];
+    const bots = botsRes.data || [];
+    const listings = marketplaceRes.data || [];
+    const purchases = purchasesRes.data || [];
+
+    // User stats
+    const totalUsers = users.length;
+    const sellers = users.filter(u => u.roles?.role_name === 'seller').length;
+    const buyers = users.filter(u => u.roles?.role_name === 'buyer').length;
+    const admins = users.filter(u => u.roles?.role_name === 'admin').length;
+    const bannedUsers = users.filter(u => u.is_banned).length;
+
+    // New users in last 7 days
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const newUsersThisWeek = users.filter(u => new Date(u.created_at) > weekAgo).length;
+
+    // New users in last 30 days
+    const monthAgo = new Date();
+    monthAgo.setDate(monthAgo.getDate() - 30);
+    const newUsersThisMonth = users.filter(u => new Date(u.created_at) > monthAgo).length;
+
+    // Bot stats
+    const totalBots = bots.length;
+    const activeBots = bots.filter(b => b.is_active).length;
+
+    // Marketplace stats
+    const totalListings = listings.length;
+    const publishedListings = listings.filter(l => l.status === 'published').length;
+    const draftListings = listings.filter(l => l.status === 'draft').length;
+    const totalMarketplaceSales = listings.reduce((sum, l) => sum + (l.total_sales || 0), 0);
+
+    // Platform breakdown
+    const platformBreakdown = {};
+    listings.forEach(l => {
+      platformBreakdown[l.platform] = (platformBreakdown[l.platform] || 0) + 1;
+    });
+
+    // Revenue stats
+    const completedPurchases = purchases.filter(p => p.status === 'completed');
+    const totalRevenue = completedPurchases.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+    const totalPurchases = purchases.length;
+
+    // Revenue this month
+    const revenueThisMonth = completedPurchases
+      .filter(p => new Date(p.purchased_at) > monthAgo)
+      .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+
+    // Revenue this week
+    const revenueThisWeek = completedPurchases
+      .filter(p => new Date(p.purchased_at) > weekAgo)
+      .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+
+    res.json({
+      success: true,
+      stats: {
+        users: { total: totalUsers, sellers, buyers, admins, banned: bannedUsers, newThisWeek: newUsersThisWeek, newThisMonth: newUsersThisMonth },
+        bots: { total: totalBots, active: activeBots, inactive: totalBots - activeBots },
+        marketplace: { totalListings, published: publishedListings, drafts: draftListings, totalSales: totalMarketplaceSales, platformBreakdown },
+        revenue: { total: totalRevenue, thisMonth: revenueThisMonth, thisWeek: revenueThisWeek, totalPurchases },
+      },
+    });
+  } catch (error) {
+    console.error('Admin stats error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch stats.' });
+  }
+});
+
+// GET /admin/marketplace - All marketplace listings (Admin only)
+router.get('/admin/marketplace', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('marketplace_bots')
+      .select('*, users!marketplace_bots_seller_id_fkey(name, email)')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    const listings = (data || []).map(bot => ({
+      ...bot,
+      seller_name: bot.users?.name || 'Unknown',
+      seller_email: bot.users?.email || '',
+      users: undefined,
+    }));
+
+    res.json({ success: true, listings });
+  } catch (error) {
+    console.error('Admin marketplace error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch marketplace listings.' });
+  }
+});
+
+// GET /admin/purchases - All purchases (Admin only)
+router.get('/admin/purchases', verifyToken, isAdmin, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('purchases')
+      .select('*, marketplace_bots(name, platform, price), users!purchases_buyer_id_fkey(name, email)')
+      .order('purchased_at', { ascending: false });
+
+    if (error) throw error;
+
+    const purchases = (data || []).map(p => ({
+      ...p,
+      buyer_name: p.users?.name || 'Unknown',
+      buyer_email: p.users?.email || '',
+      bot_name: p.marketplace_bots?.name || 'Unknown',
+      bot_platform: p.marketplace_bots?.platform || '',
+      users: undefined,
+      marketplace_bots: undefined,
+    }));
+
+    res.json({ success: true, purchases });
+  } catch (error) {
+    console.error('Admin purchases error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch purchases.' });
   }
 });
 

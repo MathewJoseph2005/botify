@@ -29,6 +29,8 @@ export const authAPI = {
   signup: (userData) => api.post('/auth/signup', userData),
   login: (credentials) => api.post('/auth/login', credentials),
   verify: () => api.get('/auth/verify'),
+  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
+  resetPassword: (token, password) => api.post('/auth/reset-password', { token, password }),
 };
 
 // Admin API
@@ -37,13 +39,9 @@ export const adminAPI = {
   updateUser: (userId, userData) => api.put(`/auth/users/${userId}`, userData),
   banUser: (userId, is_banned) => api.patch(`/auth/users/${userId}/ban`, { is_banned }),
   deleteUser: (userId) => api.delete(`/auth/users/${userId}`),
-  // New admin endpoints
-  getStats: () => api.get('/admin/stats'),
-  getMarketplaceListings: () => api.get('/admin/marketplace-listings'),
-  updateListingStatus: (id, status) => api.patch(`/admin/marketplace-listings/${id}/status`, { status }),
-  deleteListing: (id) => api.delete(`/admin/marketplace-listings/${id}`),
-  getPurchases: () => api.get('/admin/purchases'),
-  getEmailBots: () => api.get('/admin/email-bots'),
+  getStats: () => api.get('/auth/admin/stats'),
+  getMarketplaceListings: () => api.get('/auth/admin/marketplace'),
+  getPurchases: () => api.get('/auth/admin/purchases'),
 };
 
 // Bot API
@@ -56,6 +54,8 @@ export const botAPI = {
   emailCampaign: (botId, formData) => api.post(`/bot/email-campaign/${botId}`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
+  getCampaigns: () => api.get('/bot/campaigns'),
+  getCampaign: (campaignId) => api.get(`/bot/campaigns/${campaignId}`),
 };
 
 // Marketplace API

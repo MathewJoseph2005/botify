@@ -11,6 +11,8 @@ import BuyerDashboard from './pages/BuyerDashboard';
 import EmailBot from './pages/EmailBot';
 import CreateMarketplaceBotPage from './pages/CreateMarketplaceBotPage';
 import Unauthorized from './pages/Unauthorized';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import { useAuth } from './context/AuthContext';
 
 function App() {
@@ -52,6 +54,8 @@ function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/marketplace" element={<Marketplace />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Dashboard Redirect */}
           <Route path="/dashboard" element={<DashboardRedirect />} />
