@@ -1,10 +1,152 @@
 import express from 'express';
+import multer from 'multer';
+import XLSX from 'xlsx';
 import supabase from '../config/database.js';
 import verifyToken from '../middleware/auth.js';
+import telegramBotFactory from '../services/telegramBotFactory.js';
 
 const router = express.Router();
+const broadcastUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+
+function getPagination(rawLimit, rawOffset) {
+  const parsedLimit = Number.parseInt(rawLimit, 10);
+  const parsedOffset = Number.parseInt(rawOffset, 10);
+
+  const limit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 100) : 20;
+  const offset = Number.isFinite(parsedOffset) ? Math.max(parsedOffset, 0) : 0;
+
+  return { limit, offset };
+}
+
+function extractMessageFromExcelBuffer(buffer) {
+  const workbook = XLSX.read(buffer, { type: 'buffer' });
+  const sheetName = workbook.SheetNames[0];
+  const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
+
+  const messages = rows
+    .map((row) => {
+      const key = Object.keys(row).find((k) => k.toLowerCase() === 'message');
+      return key ? String(row[key] || '').trim() : '';
+    })
+    .filter(Boolean);
+
+  if (messages.length === 0) {
+    return '';
+  }
+
+  return messages.join('\n');
+}
 
 // ==================== SELLER ENDPOINTS ====================
+
+// GET /bot-factory/instances - Seller lists own Telegram bot instances
+router.get('/bot-factory/instances', verifyToken, async (req, res) => {
+  try {
+    if (req.user.role_id !== 2) {
+      return res.status(403).json({ success: false, message: 'Only sellers can view bot instances.' });
+    }
+
+    const { data, error } = await supabase
+      .from('bot_instances')
+      .select('id, seller_id, config_json, is_active, created_at, updated_at')
+      .eq('seller_id', req.user.user_id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      return res.status(500).json({ success: false, message: 'Failed to fetch bot instances.' });
+    }
+
+    return res.json({ success: true, instances: data || [] });
+  } catch (err) {
+    console.error('Fetch bot instances error:', err);
+    return res.status(500).json({ success: false, message: 'Server error.' });
+  }
+});
+
+// POST /bot-factory/instances - Seller creates or updates Telegram bot instance
+router.post('/bot-factory/instances', verifyToken, async (req, res) => {
+  try {
+    if (req.user.role_id !== 2) {
+      return res.status(403).json({ success: false, message: 'Only sellers can create bot instances.' });
+    }
+
+    const { telegramToken, configJson, isActive = true } = req.body;
+    if (!telegramToken) {
+      return res.status(400).json({ success: false, message: 'telegramToken is required.' });
+    }
+
+    const { data, error } = await supabase
+      .from('bot_instances')
+      .upsert(
+        {
+          seller_id: req.user.user_id,
+          telegram_token: telegramToken,
+          config_json: configJson || {},
+          is_active: Boolean(isActive),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'seller_id,telegram_token' }
+      )
+      .select('id, seller_id, config_json, is_active, created_at, updated_at')
+      .single();
+
+    if (error) {
+      return res.status(500).json({ success: false, message: 'Failed to save bot instance.' });
+    }
+
+    await telegramBotFactory.refreshInstances();
+    return res.status(201).json({ success: true, instance: data });
+  } catch (err) {
+    console.error('Create bot instance error:', err);
+    return res.status(500).json({ success: false, message: 'Server error.' });
+  }
+});
+
+// POST /broadcast - Seller broadcast message to subscribers of one Telegram bot instance
+router.post('/broadcast', verifyToken, broadcastUpload.single('excelFile'), async (req, res) => {
+  try {
+    if (req.user.role_id !== 2) {
+      return res.status(403).json({ success: false, message: 'Only sellers can broadcast.' });
+    }
+
+    const { botInstanceId, concurrency } = req.body;
+    if (!botInstanceId) {
+      return res.status(400).json({ success: false, message: 'botInstanceId is required.' });
+    }
+
+    if (!req.file?.buffer) {
+      return res.status(400).json({ success: false, message: 'An Excel file is required.' });
+    }
+
+    const message = extractMessageFromExcelBuffer(req.file.buffer);
+    if (!message) {
+      return res.status(400).json({ success: false, message: 'Excel file must include a non-empty Message column.' });
+    }
+
+    const result = await telegramBotFactory.broadcastToInstance({
+      sellerId: req.user.user_id,
+      instanceId: Number.parseInt(botInstanceId, 10),
+      message,
+      concurrency: Number.parseInt(concurrency, 10),
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Broadcast completed.',
+      ...result,
+    });
+  } catch (err) {
+    if (err.message === 'BOT_INSTANCE_NOT_RUNNING') {
+      return res.status(400).json({ success: false, message: 'Bot instance is not running. Check token and active status.' });
+    }
+    if (err.message === 'BOT_INSTANCE_ACCESS_DENIED') {
+      return res.status(403).json({ success: false, message: 'You can only broadcast from your own bot instance.' });
+    }
+
+    console.error('Broadcast error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to broadcast message.' });
+  }
+});
 
 // POST /create - Seller creates a new marketplace bot listing
 router.post('/create', verifyToken, async (req, res) => {
@@ -251,14 +393,15 @@ router.patch('/publish/:id', verifyToken, async (req, res) => {
 
 // ==================== PUBLIC / BUYER ENDPOINTS ====================
 
-// GET /browse - Browse all published marketplace bots (public)
-router.get('/browse', async (req, res) => {
+// GET /browse or /marketplace - Browse all published marketplace bots (public)
+router.get(['/browse', '/marketplace'], async (req, res) => {
   try {
     const { platform, category, search, sort } = req.query;
+    const { limit, offset } = getPagination(req.query.limit, req.query.offset);
 
     let query = supabase
       .from('marketplace_bots')
-      .select('*, users!marketplace_bots_seller_id_fkey(name, email)')
+      .select('*, users!marketplace_bots_seller_id_fkey(name, email)', { count: 'exact' })
       .eq('status', 'published');
 
     if (platform) {
@@ -289,7 +432,9 @@ router.get('/browse', async (req, res) => {
         query = query.order('created_at', { ascending: false });
     }
 
-    const { data, error } = await query;
+    query = query.range(offset, offset + limit - 1);
+
+    const { data, error, count } = await query;
 
     if (error) {
       console.error('Browse marketplace error:', error);
@@ -304,7 +449,16 @@ router.get('/browse', async (req, res) => {
       users: undefined,
     }));
 
-    res.json({ success: true, listings });
+    res.json({
+      success: true,
+      listings,
+      pagination: {
+        limit,
+        offset,
+        total: count || 0,
+        hasMore: offset + listings.length < (count || 0),
+      },
+    });
   } catch (err) {
     console.error('Browse marketplace error:', err);
     res.status(500).json({ success: false, message: 'Server error.' });
@@ -351,53 +505,33 @@ router.post('/purchase/:id', verifyToken, async (req, res) => {
 
     const { id } = req.params;
 
-    // Check if listing exists and is published
-    const { data: bot, error: botErr } = await supabase
-      .from('marketplace_bots')
-      .select('*')
-      .eq('id', id)
-      .eq('status', 'published')
-      .single();
-
-    if (botErr || !bot) {
-      return res.status(404).json({ success: false, message: 'Listing not found or not available.' });
+    const parsedBotId = Number.parseInt(id, 10);
+    if (!Number.isFinite(parsedBotId) || parsedBotId <= 0) {
+      return res.status(400).json({ success: false, message: 'Invalid bot id.' });
     }
 
-    // Check if buyer already purchased this bot
-    const { data: existingPurchase } = await supabase
-      .from('purchases')
-      .select('id')
-      .eq('buyer_id', req.user.user_id)
-      .eq('marketplace_bot_id', id)
-      .eq('status', 'completed')
-      .single();
+    const { data, error } = await supabase.rpc('purchase_marketplace_bot', {
+      p_buyer_id: req.user.user_id,
+      p_marketplace_bot_id: parsedBotId,
+    });
 
-    if (existingPurchase) {
-      return res.status(400).json({ success: false, message: 'You have already purchased this bot.' });
-    }
+    if (error) {
+      const msg = error.message || 'Purchase failed.';
+      if (msg.includes('LISTING_NOT_FOUND')) {
+        return res.status(404).json({ success: false, message: 'Listing not found or not available.' });
+      }
+      if (msg.includes('SELF_PURCHASE_NOT_ALLOWED')) {
+        return res.status(400).json({ success: false, message: 'You cannot purchase your own bot.' });
+      }
+      if (msg.includes('ALREADY_PURCHASED') || msg.includes('duplicate key')) {
+        return res.status(400).json({ success: false, message: 'You have already purchased this bot.' });
+      }
 
-    // Create purchase record
-    const { data: purchase, error: purchaseErr } = await supabase
-      .from('purchases')
-      .insert({
-        buyer_id: req.user.user_id,
-        marketplace_bot_id: parseInt(id),
-        amount: bot.price,
-        status: 'completed',
-      })
-      .select()
-      .single();
-
-    if (purchaseErr) {
-      console.error('Purchase error:', purchaseErr);
+      console.error('Purchase RPC error:', error);
       return res.status(500).json({ success: false, message: 'Failed to complete purchase.' });
     }
 
-    // Increment total_sales on the bot
-    await supabase
-      .from('marketplace_bots')
-      .update({ total_sales: (bot.total_sales || 0) + 1 })
-      .eq('id', id);
+    const purchase = Array.isArray(data) ? data[0] : data;
 
     res.status(201).json({
       success: true,
@@ -410,25 +544,37 @@ router.post('/purchase/:id', verifyToken, async (req, res) => {
   }
 });
 
-// GET /my-purchases - Buyer gets their purchased bots
-router.get('/my-purchases', verifyToken, async (req, res) => {
+// GET /my-purchases or /purchase-history - Buyer gets purchased bots with pagination
+router.get(['/my-purchases', '/purchase-history'], verifyToken, async (req, res) => {
   try {
     if (req.user.role_id !== 3) {
       return res.status(403).json({ success: false, message: 'Only buyers can view purchases.' });
     }
 
-    const { data, error } = await supabase
+    const { limit, offset } = getPagination(req.query.limit, req.query.offset);
+
+    const { data, error, count } = await supabase
       .from('purchases')
-      .select('*, marketplace_bots(*)')
+      .select('*, marketplace_bots(*)', { count: 'exact' })
       .eq('buyer_id', req.user.user_id)
-      .order('purchased_at', { ascending: false });
+      .order('purchased_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (error) {
       console.error('Fetch purchases error:', error);
       return res.status(500).json({ success: false, message: 'Failed to fetch purchases.' });
     }
 
-    res.json({ success: true, purchases: data });
+    res.json({
+      success: true,
+      purchases: data || [],
+      pagination: {
+        limit,
+        offset,
+        total: count || 0,
+        hasMore: offset + (data?.length || 0) < (count || 0),
+      },
+    });
   } catch (err) {
     console.error('Fetch purchases error:', err);
     res.status(500).json({ success: false, message: 'Server error.' });

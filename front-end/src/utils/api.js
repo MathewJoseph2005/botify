@@ -58,6 +58,19 @@ export const botAPI = {
   getCampaign: (campaignId) => api.get(`/bot/campaigns/${campaignId}`),
 };
 
+// WhatsApp API
+export const whatsappAPI = {
+  init: () => api.post('/bot/whatsapp/init'),
+  getQR: () => api.get('/bot/whatsapp/qr'),
+  getStatus: () => api.get('/bot/whatsapp/status'),
+  logout: () => api.post('/bot/whatsapp/logout'),
+  sendCampaign: (formData) => api.post('/bot/whatsapp-campaign', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  getCampaigns: () => api.get('/bot/whatsapp-campaigns'),
+  getCampaign: (campaignId) => api.get(`/bot/whatsapp-campaigns/${campaignId}`),
+};
+
 // Marketplace API
 export const marketplaceAPI = {
   // Seller endpoints

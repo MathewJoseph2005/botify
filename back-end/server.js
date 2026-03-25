@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth.js';
 import botRoutes from './routes/bot.js';
 import marketplaceRoutes from './routes/marketplace.js';
+import telegramBotFactory from './services/telegramBotFactory.js';
 import './config/database.js'; // Initialize Supabase connection
 
 // Load environment variables
@@ -84,16 +85,26 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`\n🚀 Botify Backend Server is running on port ${PORT}`);
   console.log(`📡 API available at http://localhost:${PORT}/api`);
   console.log(`🏥 Health check: http://localhost:${PORT}/api/health\n`);
+
+  try {
+    await telegramBotFactory.initialize();
+    telegramBotFactory.startAutoRefresh();
+  } catch (err) {
+    console.error('Telegram Bot Factory failed to initialize:', err.message);
+  }
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM signal received: closing HTTP server');
-  process.exit(0);
+  telegramBotFactory
+    .shutdown()
+    .catch((err) => console.error('Telegram Bot Factory shutdown error:', err.message))
+    .finally(() => process.exit(0));
 });
 
 export default app;

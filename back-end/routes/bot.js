@@ -7,6 +7,7 @@ import path from 'path';
 import fs from 'fs';
 import verifyToken from '../middleware/auth.js';
 import supabase from '../config/database.js';
+import whatsappController from '../controllers/WhatsAppController.js';
 
 const router = express.Router();
 
@@ -633,6 +634,383 @@ router.get('/campaigns/:campaignId', verifyToken, async (req, res) => {
       message: 'Failed to fetch campaign details.',
       error: process.env.NODE_ENV === 'development' ? err.message : undefined,
     });
+  }
+});
+
+// ===========================================================================
+// WHATSAPP CAMPAIGN ROUTES
+// ===========================================================================
+
+// Multer config for WhatsApp Excel upload (reuse same upload dir)
+const waUpload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowedExts = ['.xlsx', '.xls', '.csv'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!allowedExts.includes(ext)) {
+      return cb(new Error('Only .xlsx, .xls, or .csv files are allowed.'));
+    }
+    cb(null, true);
+  },
+}).single('excelFile');
+
+// ---------------------------------------------------------------------------
+// Helper – parse name + whatsapp_number from Excel / CSV
+// ---------------------------------------------------------------------------
+function normalizeHeaderKey(key) {
+  return String(key || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function normalizePhoneValue(value) {
+  const text = String(value ?? '').trim();
+  if (!text) return '';
+
+  // Excel sometimes stores numbers with a trailing .0; strip it safely.
+  const withoutDecimal = text.replace(/\.0+$/, '');
+  const withoutScientific = withoutDecimal.replace(/E\+/gi, 'e+');
+
+  // Convert scientific-notation-like values (for example 9.1987654321e+11).
+  if (/^\d+(\.\d+)?e\+\d+$/i.test(withoutScientific)) {
+    const numeric = Number(withoutScientific);
+    if (Number.isFinite(numeric)) {
+      return String(Math.trunc(numeric));
+    }
+  }
+
+  return withoutScientific.replace(/[^\d]/g, '');
+}
+
+function isLikelyPhoneNumber(value) {
+  if (!value) return false;
+  const digitsOnly = String(value).replace(/\D/g, '');
+  // Accept local and international style numbers.
+  return digitsOnly.length >= 8 && digitsOnly.length <= 15;
+}
+
+function parseWhatsAppRecipients(filePath) {
+  const workbook = XLSX.readFile(filePath);
+  const sheetName = workbook.SheetNames[0];
+  const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
+    defval: '',
+    raw: true,
+    blankrows: false,
+  });
+
+  const phoneAliases = new Set([
+    'whatsappnumber',
+    'whatsappno',
+    'whatsapp',
+    'phone',
+    'phonenumber',
+    'mobile',
+    'mobilenumber',
+    'number',
+    'contact',
+    'contactnumber',
+    'recipient',
+  ]);
+  const nameAliases = new Set(['name', 'fullname', 'customername', 'recipientname']);
+
+  const recipients = [];
+  for (const row of rows) {
+    const entries = Object.entries(row);
+    let name = '';
+    let phone = '';
+
+    for (const [key, value] of entries) {
+      const normalizedKey = normalizeHeaderKey(key);
+      const cleanedValue = String(value || '').trim();
+      if (!cleanedValue) continue;
+
+      if (!phone) {
+        const looksLikePhoneHeader =
+          phoneAliases.has(normalizedKey) || /(whatsapp|wa|phone|mobile|contact|number)/.test(normalizedKey);
+        if (looksLikePhoneHeader) {
+          const candidatePhone = normalizePhoneValue(cleanedValue);
+          if (isLikelyPhoneNumber(candidatePhone)) {
+            phone = candidatePhone;
+          }
+          continue;
+        }
+      }
+
+      if (!name) {
+        const looksLikeNameHeader = nameAliases.has(normalizedKey) || /name/.test(normalizedKey);
+        if (looksLikeNameHeader) {
+          name = cleanedValue;
+        }
+      }
+    }
+
+    if (phone && isLikelyPhoneNumber(phone)) {
+      recipients.push({ name, phone });
+    }
+  }
+
+  // Fallback: accept headerless files where first column is phone and second is optional name.
+  if (recipients.length === 0) {
+    const rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
+      header: 1,
+      defval: '',
+      raw: true,
+      blankrows: false,
+    });
+
+    for (const row of rawRows) {
+      if (!Array.isArray(row) || row.length === 0) continue;
+      const firstCell = String(row[0] ?? '').trim();
+      const candidatePhone = normalizePhoneValue(firstCell);
+      if (!isLikelyPhoneNumber(candidatePhone)) continue;
+
+      const secondCell = String(row[1] ?? '').trim();
+      recipients.push({
+        name: secondCell,
+        phone: candidatePhone,
+      });
+    }
+  }
+
+  // Deduplicate by phone while preserving first seen name/value.
+  const deduped = new Map();
+  for (const recipient of recipients) {
+    if (!deduped.has(recipient.phone)) {
+      deduped.set(recipient.phone, recipient);
+    }
+  }
+
+  return [...deduped.values()];
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/bot/whatsapp/init
+// Start the WhatsApp Web client (generates QR code)
+// ---------------------------------------------------------------------------
+router.post('/whatsapp/init', verifyToken, (_req, res) => {
+  try {
+    whatsappController.initialize();
+    res.status(200).json({
+      success: true,
+      message: 'WhatsApp client initializing. Fetch /whatsapp/qr for the QR code.',
+      ...whatsappController.getStatus(),
+    });
+  } catch (err) {
+    console.error('WhatsApp init error:', err);
+    res.status(500).json({ success: false, message: 'Failed to initialize WhatsApp client.' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/bot/whatsapp/qr
+// Return current QR code data-URL (or ready status)
+// ---------------------------------------------------------------------------
+router.get('/whatsapp/qr', verifyToken, (_req, res) => {
+  const status = whatsappController.getStatus();
+  res.status(200).json({ success: true, ...status });
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/bot/whatsapp/status
+// Return client connection status
+// ---------------------------------------------------------------------------
+router.get('/whatsapp/status', verifyToken, (_req, res) => {
+  const status = whatsappController.getStatus();
+  res.status(200).json({ success: true, ...status });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/bot/whatsapp/logout
+// Disconnect & destroy the WhatsApp session
+// ---------------------------------------------------------------------------
+router.post('/whatsapp/logout', verifyToken, async (_req, res) => {
+  try {
+    await whatsappController.destroy();
+    res.status(200).json({ success: true, message: 'WhatsApp session destroyed.' });
+  } catch (err) {
+    console.error('WhatsApp logout error:', err);
+    res.status(500).json({ success: false, message: 'Failed to destroy WhatsApp session.' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/bot/whatsapp-campaign
+// Accept Excel file + messageBody, run bulk WhatsApp campaign
+// ---------------------------------------------------------------------------
+router.post('/whatsapp-campaign', verifyToken, (req, res, next) => {
+  waUpload(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+    next();
+  });
+}, async (req, res) => {
+  const { messageBody, campaignName } = req.body;
+
+  // ── Validation ────────────────────────────────────────────────────────
+  if (!messageBody) {
+    return res.status(400).json({ success: false, message: 'messageBody is required.' });
+  }
+
+  if (!req.file) {
+    return res.status(400).json({
+      success: false,
+      message: 'An Excel/CSV file with recipient data is required.',
+    });
+  }
+
+  if (!whatsappController.isReady) {
+    cleanupFile(req.file.path);
+    return res.status(400).json({
+      success: false,
+      message: 'WhatsApp client is not connected. Please scan the QR code first.',
+    });
+  }
+
+  const excelPath = req.file.path;
+
+  try {
+    // ── Parse recipients ──────────────────────────────────────────────
+    let recipients;
+    try {
+      recipients = parseWhatsAppRecipients(excelPath);
+    } catch (parseErr) {
+      cleanupFile(excelPath);
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to parse the Excel file. Use a column like "whatsapp_number", "phone", or upload a single-column phone list.',
+      });
+    }
+
+    if (recipients.length === 0) {
+      cleanupFile(excelPath);
+      return res.status(400).json({
+        success: false,
+        message: 'No valid recipients found. Add phone numbers with 8-15 digits (with country code) in a phone/whatsapp column or first column.',
+      });
+    }
+
+    // ── Create campaign record ────────────────────────────────────────
+    const { data: campaign, error: campaignErr } = await supabase
+      .from('whatsapp_campaigns')
+      .insert({
+        user_id: req.user.user_id,
+        campaign_name: campaignName || 'Untitled Campaign',
+        message_body: messageBody,
+        total_recipients: recipients.length,
+        status: 'sending',
+        started_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single();
+
+    if (campaignErr) {
+      console.error('Failed to create WhatsApp campaign record:', campaignErr);
+      cleanupFile(excelPath);
+      return res.status(500).json({ success: false, message: 'Failed to create campaign record.' });
+    }
+
+    // Respond immediately – the actual sending happens in the background
+    res.status(200).json({
+      success: true,
+      message: `WhatsApp campaign started! Sending to ${recipients.length} recipient(s).`,
+      campaignId: campaign.id,
+      totalRecipients: recipients.length,
+    });
+
+    // ── Background send loop ──────────────────────────────────────────
+    let sent = 0;
+    let failed = 0;
+
+    for (const recipient of recipients) {
+      try {
+        // Replace {{name}} placeholder
+        const personalised = messageBody.replace(/\{\{name\}\}/gi, recipient.name || '');
+        await whatsappController.sendMessage(recipient.phone, personalised);
+        sent++;
+      } catch (sendErr) {
+        console.error(`[WA Campaign] Failed to send to ${recipient.phone}:`, sendErr.message);
+        failed++;
+      }
+
+      // Update progress in DB periodically (every message)
+      await supabase
+        .from('whatsapp_campaigns')
+        .update({ sent_count: sent, failed_count: failed })
+        .eq('id', campaign.id);
+
+      // Random delay 3-5 seconds to avoid spam detection
+      const delay = 3000 + Math.random() * 2000;
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+
+    // ── Finalise campaign ───────────────────────────────────────────
+    await supabase
+      .from('whatsapp_campaigns')
+      .update({
+        sent_count: sent,
+        failed_count: failed,
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+      })
+      .eq('id', campaign.id);
+
+    cleanupFile(excelPath);
+    console.log(`[WA Campaign] Completed – sent: ${sent}, failed: ${failed}`);
+  } catch (err) {
+    console.error('WhatsApp campaign error:', err);
+    cleanupFile(excelPath);
+    // Campaign may already have been recorded – try to mark it failed
+    // (response already sent, so we can't respond here)
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/bot/whatsapp-campaigns
+// Retrieve WhatsApp campaign history for the authenticated user
+// ---------------------------------------------------------------------------
+router.get('/whatsapp-campaigns', verifyToken, async (req, res) => {
+  try {
+    const { data: campaigns, error } = await supabase
+      .from('whatsapp_campaigns')
+      .select('*')
+      .eq('user_id', req.user.user_id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    res.status(200).json({ success: true, campaigns: campaigns || [] });
+  } catch (err) {
+    console.error('Error fetching WhatsApp campaigns:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch WhatsApp campaign history.',
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/bot/whatsapp-campaigns/:campaignId
+// Retrieve a single WhatsApp campaign's details (for live progress)
+// ---------------------------------------------------------------------------
+router.get('/whatsapp-campaigns/:campaignId', verifyToken, async (req, res) => {
+  const { campaignId } = req.params;
+
+  try {
+    const { data: campaign, error } = await supabase
+      .from('whatsapp_campaigns')
+      .select('*')
+      .eq('id', campaignId)
+      .eq('user_id', req.user.user_id)
+      .single();
+
+    if (error || !campaign) {
+      return res.status(404).json({ success: false, message: 'Campaign not found.' });
+    }
+
+    res.status(200).json({ success: true, campaign });
+  } catch (err) {
+    console.error('Error fetching WhatsApp campaign:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch campaign details.' });
   }
 });
 

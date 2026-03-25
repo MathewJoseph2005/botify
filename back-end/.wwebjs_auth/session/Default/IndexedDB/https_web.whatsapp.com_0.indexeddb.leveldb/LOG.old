@@ -1,0 +1,59 @@
+2026/03/24-15:42:09.963 8b5c Reusing MANIFEST C:\Users\MATHEW JOSEPH\OneDrive\Documents\GitHub\botify\back-end\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/03/24-15:42:09.968 8b5c Recovering log #9458
+2026/03/24-15:42:09.991 8b5c Reusing old log C:\Users\MATHEW JOSEPH\OneDrive\Documents\GitHub\botify\back-end\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/009458.log 
+2026/03/24-15:42:14.628 89cc Compacting 1@1 + 2@2 files
+2026/03/24-15:42:14.691 89cc Generated table #9462@1: 46311 keys, 658059 bytes
+2026/03/24-15:42:14.697 89cc Generated table #9463@1: 1348 keys, 55187 bytes
+2026/03/24-15:42:14.711 89cc Generated table #9464@1: 5176 keys, 327390 bytes
+2026/03/24-15:42:14.712 89cc Compacted 1@1 + 2@2 files => 1040636 bytes
+2026/03/24-15:42:14.713 89cc compacted to: files[ 0 0 3 30 0 0 0 ]
+2026/03/24-15:42:14.713 89cc Delete type=2 #9454
+2026/03/24-15:42:14.713 89cc Delete type=2 #9455
+2026/03/24-15:42:14.713 89cc Delete type=2 #9459
+2026/03/24-15:42:15.481 89cc Compacting 1@2 + 9@3 files
+2026/03/24-15:42:15.607 89cc Generated table #9465@2: 54377 keys, 2227024 bytes
+2026/03/24-15:42:15.723 89cc Generated table #9466@2: 47022 keys, 2204549 bytes
+2026/03/24-15:42:15.865 89cc Generated table #9467@2: 65813 keys, 2232825 bytes
+2026/03/24-15:42:15.985 89cc Generated table #9468@2: 48442 keys, 2216778 bytes
+2026/03/24-15:42:16.035 89cc Generated table #9469@2: 8793 keys, 2151320 bytes
+2026/03/24-15:42:16.072 89cc Generated table #9470@2: 1288 keys, 2147168 bytes
+2026/03/24-15:42:16.118 89cc Generated table #9471@2: 1484 keys, 2152247 bytes
+2026/03/24-15:42:16.162 89cc Generated table #9472@2: 2004 keys, 2150905 bytes
+2026/03/24-15:42:16.169 89cc Generated table #9473@2: 152 keys, 239086 bytes
+2026/03/24-15:42:16.170 89cc Compacted 1@2 + 9@3 files => 17721902 bytes
+2026/03/24-15:42:16.170 89cc compacted to: files[ 0 0 2 30 0 0 0 ]
+2026/03/24-15:42:16.171 89cc Delete type=2 #9406
+2026/03/24-15:42:16.172 89cc Delete type=2 #9407
+2026/03/24-15:42:16.172 89cc Delete type=2 #9408
+2026/03/24-15:42:16.172 89cc Delete type=2 #9409
+2026/03/24-15:42:16.172 89cc Delete type=2 #9410
+2026/03/24-15:42:16.172 89cc Delete type=2 #9411
+2026/03/24-15:42:16.172 89cc Delete type=2 #9412
+2026/03/24-15:42:16.172 89cc Delete type=2 #9413
+2026/03/24-15:42:16.172 89cc Delete type=2 #9425
+2026/03/24-15:42:16.172 89cc Delete type=2 #9463
+2026/03/24-15:42:16.773 8b5c Compacting 1@2 + 10@3 files
+2026/03/24-15:42:16.834 8b5c Generated table #9474@2: 5984 keys, 2121193 bytes
+2026/03/24-15:42:16.869 8b5c Generated table #9475@2: 1605 keys, 2115594 bytes
+2026/03/24-15:42:16.926 8b5c Generated table #9476@2: 14465 keys, 2135610 bytes
+2026/03/24-15:42:17.046 8b5c Generated table #9477@2: 99864 keys, 2251986 bytes
+2026/03/24-15:42:17.157 8b5c Generated table #9478@2: 95153 keys, 2243231 bytes
+2026/03/24-15:42:17.266 8b5c Generated table #9479@2: 95446 keys, 2243544 bytes
+2026/03/24-15:42:17.371 8b5c Generated table #9480@2: 95193 keys, 2243387 bytes
+2026/03/24-15:42:17.484 8b5c Generated table #9481@2: 94835 keys, 2244934 bytes
+2026/03/24-15:42:17.602 8b5c Generated table #9482@2: 95988 keys, 2244942 bytes
+2026/03/24-15:42:17.712 8b5c Generated table #9483@2: 95410 keys, 2243837 bytes
+2026/03/24-15:42:17.723 8b5c Generated table #9484@2: 6529 keys, 186641 bytes
+2026/03/24-15:42:17.723 8b5c Compacted 1@2 + 10@3 files => 22274899 bytes
+2026/03/24-15:42:17.724 8b5c compacted to: files[ 0 0 1 31 0 0 0 ]
+2026/03/24-15:42:17.725 8b5c Delete type=2 #9415
+2026/03/24-15:42:17.725 8b5c Delete type=2 #9416
+2026/03/24-15:42:17.725 8b5c Delete type=2 #9417
+2026/03/24-15:42:17.725 8b5c Delete type=2 #9418
+2026/03/24-15:42:17.725 8b5c Delete type=2 #9419
+2026/03/24-15:42:17.725 8b5c Delete type=2 #9420
+2026/03/24-15:42:17.725 8b5c Delete type=2 #9421
+2026/03/24-15:42:17.725 8b5c Delete type=2 #9422
+2026/03/24-15:42:17.725 8b5c Delete type=2 #9423
+2026/03/24-15:42:17.726 8b5c Delete type=2 #9424
+2026/03/24-15:42:17.726 8b5c Delete type=2 #9462
