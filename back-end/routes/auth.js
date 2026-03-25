@@ -747,11 +747,23 @@ export default router;
 
 // Google OAuth token verification endpoint
 // Expects { id_token } from client (Google Identity Services)
+// Optional query param: ?role_id=2 (seller) or 3 (buyer) - only used for NEW users
 router.post('/google', async (req, res) => {
   const { id_token } = req.body;
+  const { role_id: requestedRoleId } = req.query;
 
   if (!id_token) {
     return res.status(400).json({ success: false, message: 'id_token is required.' });
+  }
+
+  // Validate role_id if provided: allow only seller (2) or buyer (3)
+  let roleIdForNewUser = 3; // default to buyer
+  if (requestedRoleId) {
+    const numRoleId = parseInt(requestedRoleId, 10);
+    if (![2, 3].includes(numRoleId)) {
+      return res.status(400).json({ success: false, message: 'Invalid role_id. Must be 2 (seller) or 3 (buyer).' });
+    }
+    roleIdForNewUser = numRoleId;
   }
 
   try {
@@ -792,25 +804,22 @@ router.post('/google', async (req, res) => {
         { expiresIn: '7d' }
       );
 
-      return res.status(200).json({ success: true, token, user: {
-        user_id: existingUser.user_id,
-        name: existingUser.name,
-        email: existingUser.email,
-        phone: existingUser.phone,
-        role_id: existingUser.role_id,
-        role_name: existingUser.roles?.role_name || 'buyer'
-      }});
+      return res.status(200).json({ 
+        success: true, 
+        token, 
+        isNewUser: false,
+        user: {
+          user_id: existingUser.user_id,
+          name: existingUser.name,
+          email: existingUser.email,
+          phone: existingUser.phone,
+          role_id: existingUser.role_id,
+          role_name: existingUser.roles?.role_name || 'buyer'
+        }
+      });
     }
 
-    // Create new user: find buyer role id
-    const { data: buyerRole, error: roleErr } = await supabase
-      .from('roles')
-      .select('role_id')
-      .eq('role_name', 'buyer')
-      .single();
-
-    const role_id = (buyerRole && buyerRole.role_id) ? buyerRole.role_id : 3;
-
+    // Create new user: use requested role_id or default to buyer
     // Generate a random password hash to satisfy NOT NULL constraint
     const randomPassword = crypto.randomBytes(16).toString('hex');
     const saltRounds = 10;
@@ -818,7 +827,7 @@ router.post('/google', async (req, res) => {
 
     const { data: newUser, error: insertErr } = await supabase
       .from('users')
-      .insert([{ name: name || email.split('@')[0], email: email.toLowerCase(), password_hash, phone: null, role_id }])
+      .insert([{ name: name || email.split('@')[0], email: email.toLowerCase(), password_hash, phone: null, role_id: roleIdForNewUser }])
       .select('user_id, name, email, phone, role_id')
       .single();
 
@@ -832,14 +841,22 @@ router.post('/google', async (req, res) => {
       { expiresIn: '7d' }
     );
 
-    return res.status(201).json({ success: true, token, user: {
-      user_id: newUser.user_id,
-      name: newUser.name,
-      email: newUser.email,
-      phone: newUser.phone,
-      role_id: newUser.role_id,
-      role_name: 'buyer'
-    }});
+    // Determine role name based on role_id
+    const roleName = newUser.role_id === 2 ? 'seller' : 'buyer';
+
+    return res.status(201).json({ 
+      success: true, 
+      token, 
+      isNewUser: true,
+      user: {
+        user_id: newUser.user_id,
+        name: newUser.name,
+        email: newUser.email,
+        phone: newUser.phone,
+        role_id: newUser.role_id,
+        role_name: roleName
+      }
+    });
   } catch (error) {
     console.error('Google auth error:', error);
     res.status(500).json({ success: false, message: 'Google authentication failed.' });

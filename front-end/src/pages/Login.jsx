@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import axios from 'axios';
 import { authAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import RoleSelectModal from '../components/RoleSelectModal';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -16,12 +18,46 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Google OAuth role selection state
+  const [heldGoogleToken, setHeldGoogleToken] = useState(null);
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [isProcessingGoogleRole, setIsProcessingGoogleRole] = useState(false);
+
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
     setError('');
+  };
+
+  // Handle role selection from modal (only for new users)
+  const handleRoleSelect = async (roleId) => {
+    if (!heldGoogleToken || isProcessingGoogleRole) return;
+
+    setIsProcessingGoogleRole(true);
+    setError('');
+
+    try {
+      // Call Google auth endpoint with role_id parameter
+      const API_URL = import.meta.env.VITE_API_URL || '/api';
+      const res = await axios.post(`${API_URL}/auth/google?role_id=${roleId}`, { id_token: heldGoogleToken });
+
+      if (res.data.success) {
+        login(res.data.token, res.data.user);
+        setShowRoleModal(false);
+        setHeldGoogleToken(null);
+        
+        const roleName = res.data.user.role_name;
+        if (roleName === 'admin') navigate('/dashboard/admin');
+        else if (roleName === 'seller') navigate('/dashboard/seller');
+        else navigate('/dashboard/buyer');
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to complete Google sign-up. Please try again.');
+    } finally {
+      setIsProcessingGoogleRole(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -74,18 +110,33 @@ const Login = () => {
           callback: async (response) => {
             const id_token = response?.credential;
             if (!id_token) return;
+            
+            // Hold the token and show role selection modal for new users
+            setHeldGoogleToken(id_token);
+            setError('');
+            
+            // First, we need to check if this is a new user
+            // We'll do this by attempting login without role_id
             setLoading(true);
             try {
               const res = await authAPI.googleSignIn({ id_token });
               if (res.data.success) {
-                login(res.data.token, res.data.user);
-                const roleName = res.data.user.role_name;
-                if (roleName === 'admin') navigate('/dashboard/admin');
-                else if (roleName === 'seller') navigate('/dashboard/seller');
-                else navigate('/dashboard/buyer');
+                // Check if this is a new user
+                if (res.data.isNewUser) {
+                  // Show role modal for new user to select buyer or seller
+                  setShowRoleModal(true);
+                } else {
+                  // Existing user - complete login immediately
+                  login(res.data.token, res.data.user);
+                  const roleName = res.data.user.role_name;
+                  if (roleName === 'admin') navigate('/dashboard/admin');
+                  else if (roleName === 'seller') navigate('/dashboard/seller');
+                  else navigate('/dashboard/buyer');
+                }
               }
             } catch (err) {
               setError(err.response?.data?.message || 'Google sign-in failed.');
+              setHeldGoogleToken(null);
             } finally {
               setLoading(false);
             }
@@ -206,6 +257,13 @@ const Login = () => {
           </div>
         </form>
       </div>
+      
+      {/* Role Selection Modal for new Google users */}
+      <RoleSelectModal 
+        isOpen={showRoleModal} 
+        onSelectRole={handleRoleSelect} 
+        isLoading={isProcessingGoogleRole}
+      />
     </div>
   );
 };
