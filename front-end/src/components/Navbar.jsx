@@ -48,6 +48,14 @@ const Navbar = () => {
                 Email Bot
               </Link>
             )}
+            {isAuthenticated && (
+              <Link
+                to="/whatsapp-bot"
+                className="text-gray-700 hover:text-primary-600 transition duration-200"
+              >
+                WhatsApp Bot
+              </Link>
+            )}
           </div>
 
           {/* Desktop Auth Buttons */}
@@ -127,6 +135,13 @@ const Navbar = () => {
                   className="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-primary-600 transition"
                 >
                   Email Bot
+                </Link>
+                <Link
+                  to="/whatsapp-bot"
+                  onClick={closeMobile}
+                  className="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-primary-600 transition"
+                >
+                  WhatsApp Bot
                 </Link>
               </>
             )}

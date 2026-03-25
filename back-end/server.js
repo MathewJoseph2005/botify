@@ -5,7 +5,7 @@ import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth.js';
 import botRoutes from './routes/bot.js';
 import marketplaceRoutes from './routes/marketplace.js';
-import adminRoutes from './routes/admin.js';
+import telegramBotFactory from './services/telegramBotFactory.js';
 import './config/database.js'; // Initialize Supabase connection
 
 // Load environment variables
@@ -17,18 +17,19 @@ const PORT = process.env.PORT || 5000;
 // Rate limiters
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // 20 requests per window per IP
+  max: 30, // 30 requests per window per IP (login/signup)
   message: {
     success: false,
     message: 'Too many requests. Please try again after 15 minutes.',
   },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.path.startsWith('/admin/'), // Admin data routes use general limiter only
 });
 
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 200,
   message: {
     success: false,
     message: 'Too many requests. Please slow down.',
@@ -55,7 +56,6 @@ app.use((req, res, next) => {
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/bot', botRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
-app.use('/api/admin', adminRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {
@@ -85,16 +85,26 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`\n🚀 Botify Backend Server is running on port ${PORT}`);
   console.log(`📡 API available at http://localhost:${PORT}/api`);
   console.log(`🏥 Health check: http://localhost:${PORT}/api/health\n`);
+
+  try {
+    await telegramBotFactory.initialize();
+    telegramBotFactory.startAutoRefresh();
+  } catch (err) {
+    console.error('Telegram Bot Factory failed to initialize:', err.message);
+  }
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM signal received: closing HTTP server');
-  process.exit(0);
+  telegramBotFactory
+    .shutdown()
+    .catch((err) => console.error('Telegram Bot Factory shutdown error:', err.message))
+    .finally(() => process.exit(0));
 });
 
 export default app;

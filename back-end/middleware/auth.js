@@ -22,4 +22,19 @@ const verifyToken = (req, res, next) => {
   }
 };
 
+/**
+ * Middleware that requires the authenticated user to be an admin (role_id === 1).
+ * Must be used AFTER verifyToken in the middleware chain.
+ */
+const isAdmin = (req, res, next) => {
+  if (req.user.role_id !== 1) {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. Admin only.',
+    });
+  }
+  next();
+};
+
 export default verifyToken;
+export { isAdmin };

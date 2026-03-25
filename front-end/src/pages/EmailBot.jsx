@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { botAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import ConfirmModal from '../components/ConfirmModal';
 
 const EmailBot = () => {
   const { user } = useAuth();
@@ -11,6 +12,7 @@ const EmailBot = () => {
   const [showCreateBotModal, setShowCreateBotModal] = useState(false);
   const [showEditBotModal, setShowEditBotModal] = useState(false);
   const [editingBot, setEditingBot] = useState(null);
+  const [deleteBotModal, setDeleteBotModal] = useState({ open: false, botId: null });
 
   // ── Create Bot Form State ───────────────────────────────────────────────
   const [createBotForm, setCreateBotForm] = useState({
@@ -29,6 +31,10 @@ const EmailBot = () => {
   const [excelFile, setExcelFile] = useState(null);
   const [attachment, setAttachment] = useState(null);
 
+  // ── Campaign History State ──────────────────────────────────────────────
+  const [campaigns, setCampaigns] = useState([]);
+  const [campaignsLoading, setCampaignsLoading] = useState(false);
+
   // ── UI State ────────────────────────────────────────────────────────────
   const [loading, setLoading] = useState(true);
   const [botsLoading, setBotsLoading] = useState(false);
@@ -39,6 +45,7 @@ const EmailBot = () => {
   // ── Fetch Bots on Mount ─────────────────────────────────────────────────
   useEffect(() => {
     fetchBots();
+    fetchCampaigns();
   }, []);
 
   const fetchBots = async () => {
@@ -62,6 +69,21 @@ const EmailBot = () => {
   };
 
   const clearResult = () => setResult(null);
+
+  // ── Fetch Campaign History ─────────────────────────────────────────────
+  const fetchCampaigns = async () => {
+    try {
+      setCampaignsLoading(true);
+      const response = await botAPI.getCampaigns();
+      if (response.data.success) {
+        setCampaigns(response.data.campaigns);
+      }
+    } catch {
+      // silently fail – campaigns are supplementary
+    } finally {
+      setCampaignsLoading(false);
+    }
+  };
 
   // ── Create Bot Handler ──────────────────────────────────────────────────
   const handleCreateBot = async (e) => {
@@ -125,7 +147,12 @@ const EmailBot = () => {
 
   // ── Delete Bot Handler ──────────────────────────────────────────────────
   const handleDeleteBot = async (botId) => {
-    if (!confirm('Are you sure you want to delete this bot?')) return;
+    setDeleteBotModal({ open: true, botId });
+  };
+
+  const confirmDeleteBot = async () => {
+    const botId = deleteBotModal.botId;
+    setDeleteBotModal({ open: false, botId: null });
 
     try {
       setBotsLoading(true);
@@ -202,6 +229,7 @@ const EmailBot = () => {
         setScheduledTime('');
         setExcelFile(null);
         setAttachment(null);
+        fetchCampaigns(); // refresh campaign history
       }
     } catch (err) {
       setResult({
@@ -455,6 +483,75 @@ const EmailBot = () => {
             Create a bot first to send email campaigns.
           </div>
         )}
+
+        {/* Campaign History */}
+        <div className="bg-white rounded-lg shadow mt-6">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-gray-900">Campaign History</h2>
+              <button
+                onClick={fetchCampaigns}
+                disabled={campaignsLoading}
+                className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition disabled:opacity-50"
+              >
+                {campaignsLoading ? 'Refreshing…' : 'Refresh'}
+              </button>
+            </div>
+          </div>
+
+          {campaignsLoading && campaigns.length === 0 ? (
+            <div className="p-8 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+              <p className="text-gray-500">Loading campaigns...</p>
+            </div>
+          ) : campaigns.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">
+              No campaigns sent yet. Send your first email campaign above!
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bot</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recipients</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sent</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Failed</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {campaigns.map((c) => (
+                    <tr key={c.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{c.bot_name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 max-w-[200px] truncate">{c.subject}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{c.recipient_count}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">{c.sent_count}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-medium">{c.failed_count}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          c.status === 'completed' ? 'bg-green-100 text-green-800' :
+                          c.status === 'sending' ? 'bg-blue-100 text-blue-800' :
+                          c.status === 'scheduled' ? 'bg-purple-100 text-purple-800' :
+                          c.status === 'failed' ? 'bg-red-100 text-red-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {c.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(c.created_at).toLocaleDateString()}{' '}
+                        {new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Create Bot Modal */}
@@ -552,6 +649,17 @@ const EmailBot = () => {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        open={deleteBotModal.open}
+        onClose={() => setDeleteBotModal({ open: false, botId: null })}
+        onConfirm={confirmDeleteBot}
+        title="Delete Bot"
+        message="Are you sure you want to delete this bot? This action cannot be undone."
+        confirmText="Delete"
+        variant="danger"
+      />
     </div>
   );
 };
