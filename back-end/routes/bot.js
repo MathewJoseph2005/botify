@@ -646,14 +646,20 @@ const waUpload = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const allowedExts = ['.xlsx', '.xls', '.csv'];
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (!allowedExts.includes(ext)) {
-      return cb(new Error('Only .xlsx, .xls, or .csv files are allowed.'));
+    if (file.fieldname === 'excelFile') {
+      const allowedExts = ['.xlsx', '.xls', '.csv'];
+      const ext = path.extname(file.originalname).toLowerCase();
+      if (!allowedExts.includes(ext)) {
+        return cb(new Error('Only .xlsx, .xls, or .csv files are allowed for recipient list.'));
+      }
     }
+    // messageAttachment can be any file type
     cb(null, true);
   },
-}).single('excelFile');
+}).fields([
+  { name: 'excelFile', maxCount: 1 },
+  { name: 'messageAttachment', maxCount: 1 },
+]);
 
 // ---------------------------------------------------------------------------
 // Helper – parse name + whatsapp_number from Excel / CSV
@@ -851,7 +857,7 @@ router.post('/whatsapp-campaign', verifyToken, (req, res, next) => {
     return res.status(400).json({ success: false, message: 'messageBody is required.' });
   }
 
-  if (!req.file) {
+  if (!req.files || !req.files.excelFile || req.files.excelFile.length === 0) {
     return res.status(400).json({
       success: false,
       message: 'An Excel/CSV file with recipient data is required.',
@@ -859,14 +865,16 @@ router.post('/whatsapp-campaign', verifyToken, (req, res, next) => {
   }
 
   if (!whatsappController.isReady) {
-    cleanupFile(req.file.path);
+    if (req.files.excelFile) cleanupFile(req.files.excelFile[0].path);
+    if (req.files.messageAttachment) cleanupFile(req.files.messageAttachment[0].path);
     return res.status(400).json({
       success: false,
       message: 'WhatsApp client is not connected. Please scan the QR code first.',
     });
   }
 
-  const excelPath = req.file.path;
+  const excelPath = req.files.excelFile[0].path;
+  const attachmentPath = req.files.messageAttachment ? req.files.messageAttachment[0].path : null;
 
   try {
     // ── Parse recipients ──────────────────────────────────────────────
@@ -875,6 +883,7 @@ router.post('/whatsapp-campaign', verifyToken, (req, res, next) => {
       recipients = parseWhatsAppRecipients(excelPath);
     } catch (parseErr) {
       cleanupFile(excelPath);
+      if (attachmentPath) cleanupFile(attachmentPath);
       return res.status(400).json({
         success: false,
         message: 'Failed to parse the Excel file. Use a column like "whatsapp_number", "phone", or upload a single-column phone list.',
@@ -883,6 +892,7 @@ router.post('/whatsapp-campaign', verifyToken, (req, res, next) => {
 
     if (recipients.length === 0) {
       cleanupFile(excelPath);
+      if (attachmentPath) cleanupFile(attachmentPath);
       return res.status(400).json({
         success: false,
         message: 'No valid recipients found. Add phone numbers with 8-15 digits (with country code) in a phone/whatsapp column or first column.',
@@ -906,6 +916,7 @@ router.post('/whatsapp-campaign', verifyToken, (req, res, next) => {
     if (campaignErr) {
       console.error('Failed to create WhatsApp campaign record:', campaignErr);
       cleanupFile(excelPath);
+      if (attachmentPath) cleanupFile(attachmentPath);
       return res.status(500).json({ success: false, message: 'Failed to create campaign record.' });
     }
 
@@ -925,7 +936,13 @@ router.post('/whatsapp-campaign', verifyToken, (req, res, next) => {
       try {
         // Replace {{name}} placeholder
         const personalised = messageBody.replace(/\{\{name\}\}/gi, recipient.name || '');
-        await whatsappController.sendMessage(recipient.phone, personalised);
+        
+        // Send with or without attachment
+        if (attachmentPath) {
+          await whatsappController.sendMessageWithMedia(recipient.phone, personalised, attachmentPath);
+        } else {
+          await whatsappController.sendMessage(recipient.phone, personalised);
+        }
         sent++;
       } catch (sendErr) {
         console.error(`[WA Campaign] Failed to send to ${recipient.phone}:`, sendErr.message);
@@ -955,10 +972,12 @@ router.post('/whatsapp-campaign', verifyToken, (req, res, next) => {
       .eq('id', campaign.id);
 
     cleanupFile(excelPath);
+    if (attachmentPath) cleanupFile(attachmentPath);
     console.log(`[WA Campaign] Completed – sent: ${sent}, failed: ${failed}`);
   } catch (err) {
     console.error('WhatsApp campaign error:', err);
     cleanupFile(excelPath);
+    if (attachmentPath) cleanupFile(attachmentPath);
     // Campaign may already have been recorded – try to mark it failed
     // (response already sent, so we can't respond here)
   }

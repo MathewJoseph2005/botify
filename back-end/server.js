@@ -12,7 +12,7 @@ import './config/database.js'; // Initialize Supabase connection
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = parseInt(process.env.PORT || 5000, 10);
 
 // Rate limiters
 const authLimiter = rateLimit({
@@ -84,19 +84,54 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server
-app.listen(PORT, async () => {
-  console.log(`\n🚀 Botify Backend Server is running on port ${PORT}`);
-  console.log(`📡 API available at http://localhost:${PORT}/api`);
-  console.log(`🏥 Health check: http://localhost:${PORT}/api/health\n`);
+// Start server with graceful error handling
+let server;
+const startServer = (port) => {
+  server = app.listen(port, async () => {
+    console.log(`\n🚀 Botify Backend Server is running on port ${port}`);
+    console.log(`📡 API available at http://localhost:${port}/api`);
+    console.log(`🏥 Health check: http://localhost:${port}/api/health\n`);
 
-  try {
-    await telegramBotFactory.initialize();
-    telegramBotFactory.startAutoRefresh();
-  } catch (err) {
-    console.error('Telegram Bot Factory failed to initialize:', err.message);
-  }
+    try {
+      await telegramBotFactory.initialize();
+      telegramBotFactory.startAutoRefresh();
+    } catch (err) {
+      console.error('Telegram Bot Factory failed to initialize:', err.message);
+    }
+  });
+
+  // Handle port already in use error
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`⚠️  Port ${port} is already in use!`);
+      console.log(`🔄 Attempting to use port ${port + 1}...`);
+      server.close();
+      startServer(port + 1);
+    } else {
+      console.error('Server error:', err);
+      process.exit(1);
+    }
+  });
+};
+
+// Handle graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('\n📌 SIGTERM signal received: closing HTTP server');
+  server.close(() => {
+    console.log('✅ HTTP server closed');
+    process.exit(0);
+  });
 });
+
+process.on('SIGINT', () => {
+  console.log('\n📌 SIGINT signal received: closing HTTP server');
+  server.close(() => {
+    console.log('✅ HTTP server closed');
+    process.exit(0);
+  });
+});
+
+startServer(PORT);
 
 // Graceful shutdown
 process.on('SIGTERM', () => {

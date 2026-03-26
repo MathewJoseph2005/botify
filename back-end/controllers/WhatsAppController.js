@@ -4,6 +4,8 @@
 import pkg from 'whatsapp-web.js';
 const { Client, LocalAuth } = pkg;
 import QRCode from 'qrcode';
+import fs from 'fs';
+import path from 'path';
 
 class WhatsAppController {
   constructor() {
@@ -141,6 +143,42 @@ class WhatsAppController {
     }
 
     await this.client.sendMessage(chatId, message);
+  }
+
+  // ── Send a message with file attachment ─────────────────────────────────
+  async sendMessageWithMedia(phoneNumber, message, filePath) {
+    if (!this.isReady) {
+      throw new Error('WhatsApp client is not ready. Please scan the QR code first.');
+    }
+
+    // Normalise number → remove spaces / dashes / plus, ensure @c.us suffix
+    const sanitised = phoneNumber.replace(/[\s\-\+\(\)]/g, '');
+    const chatId = sanitised.includes('@c.us') ? sanitised : `${sanitised}@c.us`;
+
+    // Check if number is registered on WhatsApp
+    const isRegistered = await this.client.isRegisteredUser(chatId);
+    if (!isRegistered) {
+      throw new Error(`Number ${phoneNumber} is not registered on WhatsApp.`);
+    }
+
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`File not found: ${filePath}`);
+    }
+
+    // Send file as media with caption
+    const fileName = path.basename(filePath);
+    const media = {
+      url: filePath,
+      filename: fileName,
+    };
+
+    // Send message with media and optional caption
+    if (message.trim()) {
+      await this.client.sendMessage(chatId, message, { media });
+    } else {
+      await this.client.sendMessage(chatId, media);
+    }
   }
 
   // ── Destroy the client ──────────────────────────────────────────────────

@@ -69,6 +69,7 @@ const WhatsAppCampaign = () => {
   // ── Campaign Form State ─────────────────────────────────────────────────
   const [campaignName, setCampaignName] = useState('');
   const [messageBody, setMessageBody] = useState('');
+  const [messageAttachment, setMessageAttachment] = useState(null);
   const [excelFile, setExcelFile] = useState(null);
   const [dragOver, setDragOver] = useState(false);
 
@@ -228,6 +229,25 @@ const WhatsAppCampaign = () => {
     if (e.target.files[0]) setExcelFile(e.target.files[0]);
   };
 
+  // ── Message Attachment Handler ─────────────────────────────────────────
+  const handleMessageAttachmentSelect = (e) => {
+    if (e.target.files[0]) {
+      setMessageAttachment(e.target.files[0]);
+    }
+  };
+
+  const getFileIcon = (filename) => {
+    const ext = filename.split('.').pop().toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return '🖼️';
+    if (['pdf'].includes(ext)) return '📄';
+    if (['doc', 'docx'].includes(ext)) return '📝';
+    if (['xls', 'xlsx', 'csv'].includes(ext)) return '📊';
+    if (['zip', 'rar', '7z'].includes(ext)) return '🗂️';
+    if (['mp3', 'wav', 'flac', 'm4a'].includes(ext)) return '🎵';
+    if (['mp4', 'avi', 'mov', 'mkv'].includes(ext)) return '🎬';
+    return '📎';
+  };
+
   // ── Send campaign ─────────────────────────────────────────────────────
   const handleSendCampaign = async (e) => {
     e.preventDefault();
@@ -247,6 +267,9 @@ const WhatsAppCampaign = () => {
     formData.append('excelFile', excelFile);
     formData.append('messageBody', messageBody);
     formData.append('campaignName', campaignName || 'Untitled Campaign');
+    if (messageAttachment) {
+      formData.append('messageAttachment', messageAttachment);
+    }
 
     try {
       setSending(true);
@@ -263,6 +286,7 @@ const WhatsAppCampaign = () => {
         startProgressPolling(res.data.campaignId);
         setCampaignName('');
         setMessageBody('');
+        setMessageAttachment(null);
         setExcelFile(null);
       }
     } catch (err) {
@@ -403,14 +427,57 @@ const WhatsAppCampaign = () => {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Message Body <span className="text-gray-400">(use {'{{name}}'} for personalisation)</span>
             </label>
-            <textarea
-              value={messageBody}
-              onChange={(e) => setMessageBody(e.target.value)}
-              rows={5}
-              placeholder={`Hi {{name}},\n\nWe have an exciting offer for you!`}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none resize-y"
-              required
-            />
+            <div className="relative">
+              <textarea
+                value={messageBody}
+                onChange={(e) => setMessageBody(e.target.value)}
+                rows={5}
+                placeholder={`Hi {{name}},\n\nWe have an exciting offer for you!`}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 pr-12 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none resize-y"
+                required
+              />
+              {/* Attachment Icon Button */}
+              <button
+                type="button"
+                onClick={() => document.getElementById('msg-attachment-input').click()}
+                title="Attach file to message"
+                className="absolute bottom-3 right-3 p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                </svg>
+              </button>
+              {/* Hidden file input for message attachment */}
+              <input
+                id="msg-attachment-input"
+                type="file"
+                onChange={handleMessageAttachmentSelect}
+                className="hidden"
+              />
+            </div>
+
+            {/* Attached File Preview */}
+            {messageAttachment && (
+              <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">{getFileIcon(messageAttachment.name)}</span>
+                  <div>
+                    <p className="text-sm font-medium text-gray-800 break-words pr-2">{messageAttachment.name}</p>
+                    <p className="text-xs text-gray-500">{(messageAttachment.size / 1024).toFixed(1)} KB</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMessageAttachment(null)}
+                  className="ml-2 p-1 text-red-500 hover:bg-red-50 rounded transition"
+                  title="Remove attachment"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* File Upload – drag-and-drop */}
