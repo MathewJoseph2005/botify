@@ -8,20 +8,29 @@
     "build": "vite build",
     "preview": "vite preview"
   },
-  "keywords": ["botify", "marketplace", "react"],
+  "keywords": [
+    "botify",
+    "marketplace",
+    "react"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
+    "@react-three/postprocessing": "^3.0.4",
+    "axios": "^1.6.5",
+    "lucide-react": "^1.7.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^6.21.1",
-    "axios": "^1.6.5"
+    "three": "^0.183.2"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",
-    "vite": "^5.0.11",
-    "tailwindcss": "^3.4.1",
+    "autoprefixer": "^10.4.16",
     "postcss": "^8.4.33",
-    "autoprefixer": "^10.4.16"
+    "tailwindcss": "^3.4.1",
+    "vite": "^5.0.11"
   }
 }

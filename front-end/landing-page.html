@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "inverse-surface": "#e5e2e1",
+              "on-tertiary": "#00315d",
+              "surface-variant": "#353534",
+              "on-secondary-container": "#342800",
+              "surface-container-low": "#1c1b1b",
+              "surface-dim": "#131313",
+              "surface-bright": "#3a3939",
+              "primary-fixed-dim": "#c6c6c7",
+              "tertiary-container": "#c5dbff",
+              "tertiary-fixed-dim": "#a4c9ff",
+              "on-secondary": "#3c2f00",
+              "on-tertiary-fixed-variant": "#004883",
+              "surface-container": "#201f1f",
+              "outline": "#999077",
+              "inverse-on-surface": "#313030",
+              "surface-container-highest": "#353534",
+              "on-primary-fixed-variant": "#454747",
+              "tertiary": "#f3f6ff",
+              "on-error": "#690005",
+              "on-tertiary-container": "#0060ad",
+              "on-background": "#e5e2e1",
+              "surface": "#131313",
+              "primary-container": "#d9dada",
+              "secondary-fixed": "#ffe088",
+              "on-secondary-fixed-variant": "#574500",
+              "on-surface-variant": "#d0c6ab",
+              "error-container": "#93000a",
+              "on-secondary-fixed": "#241a00",
+              "background": "#131313",
+              "outline-variant": "#4d4732",
+              "primary-fixed": "#e2e2e2",
+              "secondary-container": "#af8d11",
+              "on-error-container": "#ffdad6",
+              "error": "#ffb4ab",
+              "surface-tint": "#c6c6c7",
+              "inverse-primary": "#5d5f5f",
+              "surface-container-lowest": "#0e0e0e",
+              "on-tertiary-fixed": "#001c39",
+              "primary": "#f6f6f6",
+              "on-primary-fixed": "#1a1c1c",
+              "on-surface": "#e5e2e1",
+              "secondary": "#e9c349",
+              "surface-container-high": "#2a2a2a",
+              "secondary-fixed-dim": "#e9c349",
+              "on-primary-container": "#5d5f5f",
+              "on-primary": "#2f3131",
+              "tertiary": "#f3f6ff"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>body {
+    background-color: #131313;
+    background-image: radial-gradient(circle at 50% 50%, rgba(233, 195, 73, 0.08) 0%, transparent 50%), url(https://lh3.googleusercontent.com/aida-public/AB6AXuAKrYjeRqv7LevQoC5-6NeJ_PNtRDVTUmtMHuzMTuqR6IOK4vGnojuHa2u-X58_OTKkscXvJADiKk21fosnFdZUcqHhYUwmTj3uoIBpM7SRkC6TS-34DB-K-XpbxSrSXIzVu8sVahYKsgsE3RKC9Mw5g3iWZf2SMRqxVifDhDSW1G8zzvUiz02LYPaCD7v6DLiBdBt7mSXseH8yT6IOaALsEl5oHdkcq4NBmf4t_rO1wL3y1GEEI24jSDtwZl2Wg6ce8tC4R8dxs5c);
+    background-attachment: fixed
+    }
+.glass-card {
+    background: rgba(14, 14, 14, 0.6);
+    backdrop-filter: blur(24px);
+    border-top: 1px solid rgba(246, 246, 246, 0.2);
+    border-left: 1px solid rgba(246, 246, 246, 0.1)
+    }
+.hero-glow {
+    filter: drop-shadow(0 0 40px rgba(233, 195, 73, 0.15))
+    }
+.material-symbols-outlined {
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24
+    }</style>
+</head>
+<body class="font-body text-on-surface selection:bg-secondary/30">
+<!-- Top Navigation Shell -->
+<header class="fixed top-0 w-full z-50 no-line transition-colors duration-500 bg-gradient-to-b from-[#1c1b1b] to-transparent shadow-[0_0_15px_rgba(233,195,73,0.05)] backdrop-blur-xl">
+<nav class="flex justify-between items-center w-full px-8 py-4 max-w-7xl mx-auto">
+<div class="text-2xl font-bold tracking-tighter text-[#f6f6f6]">Botify</div>
+<div class="hidden md:flex items-center gap-8">
+<a class="text-[#f6f6f6]/70 font-medium hover:text-[#e9c349] hover:scale-105 transition-all duration-300 uppercase text-[0.6875rem] tracking-widest font-label" href="#">About</a>
+<a class="text-[#f6f6f6]/70 font-medium hover:text-[#e9c349] hover:scale-105 transition-all duration-300 uppercase text-[0.6875rem] tracking-widest font-label" href="#">Bots</a>
+<a class="text-[#f6f6f6]/70 font-medium hover:text-[#e9c349] hover:scale-105 transition-all duration-300 uppercase text-[0.6875rem] tracking-widest font-label" href="#">Contact</a>
+<a class="text-[#f6f6f6]/70 font-medium hover:text-[#e9c349] hover:scale-105 transition-all duration-300 uppercase text-[0.6875rem] tracking-widest font-label" href="#">FAQ</a>
+</div>
+<div class="flex items-center gap-6">
+<button class="text-[#f6f6f6]/70 font-medium hover:text-[#e9c349] transition-colors uppercase text-[0.6875rem] tracking-widest font-label">Login</button>
+<button class="bg-[#f6f6f6] text-[#2f3131] px-6 py-2 rounded-full font-headline font-bold hover:shadow-[0_0_15px_rgba(233,195,73,0.3)] active:scale-95 transition-all duration-300">Sign up</button>
+</div>
+</nav>
+</header>
+<main class="relative pt-32 pb-24 overflow-hidden">
+<!-- Hero Section -->
+<section class="max-w-7xl mx-auto px-8 flex flex-col items-center text-center relative z-10">
+<h1 class="font-headline font-extrabold text-[3.5rem] md:text-[5rem] leading-[1.1] tracking-[-0.04em] text-primary mb-6 max-w-4xl">
+                Elevate Your Bot Experience
+            </h1>
+<p class="text-on-surface-variant text-lg md:text-xl max-w-2xl mb-12 font-body leading-relaxed">
+                Unlock your automation potential in a fully integrated environment, powered by Botify. Precision engineering meets cinematic design.
+            </p>
+<button class="bg-primary text-on-primary px-10 py-5 rounded-full font-headline font-bold text-lg hover:shadow-[0_0_25px_rgba(233,195,73,0.4)] transition-all duration-500 hover:scale-105 active:scale-95 mb-24">
+                Sign Up &amp; Explore
+            </button>
+<!-- Interactive Visual Centerpiece -->
+<div class="relative w-full max-w-5xl aspect-video md:aspect-[21/9] flex items-center justify-center">
+<!-- Central Sphere -->
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="relative w-64 h-64 md:w-96 md:h-96 rounded-full bg-gradient-to-tr from-secondary/40 via-surface-container-high to-tertiary/20 hero-glow blur-[2px]">
+<img alt="Abstract 3D sphere" class="w-full h-full object-cover rounded-full mix-blend-overlay opacity-80" data-alt="Close-up of a central smooth 3D abstract glossy sphere shape with warm golden and iridescent reflections in a dark space" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAmaqyrGhjUJXtNT2M7x_kXIYDJjTvQG7itI_2zBFNRzy38ak8pwbH9SGl6VjVSMW7EeTzUGFnEe3NH7iFKU-ORy-IYBf2sRLgboORzR0gpe2TaczpS3Y7aVP6r_v-Glqo1sgsR9DsuT7xNOWHxUVuqrST_iKrI8NkTe3sUud4ro6fUY6Ggyw8Uj16pp_Ned3BRPB5QUCsfB68Rt2fCHCbxQmRY_ogw54uEcNO8-LUCaYfG7FmOGJGK4SRgGgbMuqESwlBXWK2WSMg"/>
+<!-- Orbiting particles/glows -->
+<div class="absolute -inset-10 border border-secondary/10 rounded-full animate-[spin_20s_linear_infinite]"></div>
+<div class="absolute -inset-20 border border-primary/5 rounded-full animate-[spin_35s_linear_infinite_reverse]"></div>
+</div>
+</div>
+<!-- Floating Glass Cards -->
+<!-- Left Card -->
+<div class="absolute left-0 top-1/2 -translate-y-1/2 hidden md:block w-72">
+<div class="glass-card p-6 rounded-2xl shadow-2xl transform -rotate-3 hover:rotate-0 transition-transform duration-500 group">
+<div class="flex justify-between items-start mb-6">
+<span class="text-secondary uppercase text-[0.6875rem] font-label tracking-widest">Available Bots</span>
+<span class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</div>
+<div class="text-4xl font-headline font-bold text-primary mb-2">500+</div>
+<p class="text-on-surface-variant text-sm font-body">Unparalleled Automation Access</p>
+</div>
+</div>
+<!-- Right Card -->
+<div class="absolute right-0 top-1/2 -translate-y-1/2 hidden md:block w-72">
+<div class="glass-card p-6 rounded-2xl shadow-2xl transform rotate-3 hover:rotate-0 transition-transform duration-500 group">
+<div class="flex justify-between items-start mb-6">
+<span class="text-secondary uppercase text-[0.6875rem] font-label tracking-widest">Uptime</span>
+<span class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">monitoring</span>
+</div>
+<div class="text-4xl font-headline font-bold text-primary mb-4">99.9%</div>
+<div class="w-full h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-[99.9%]"></div>
+</div>
+<p class="text-on-surface-variant text-sm font-body mt-4">Enterprise Grade Stability</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Bento Grid Feature Section -->
+<section class="max-w-7xl mx-auto px-8 mt-32 grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="md:col-span-2 glass-card p-10 rounded-3xl flex flex-col justify-between min-h-[320px]">
+<div>
+<h3 class="font-headline text-2xl font-bold text-primary mb-4">Celestial Intelligence</h3>
+<p class="text-on-surface-variant max-w-md">Our neural architecture mirrors the precision of stellar navigation, ensuring your automations never lose their trajectory.</p>
+</div>
+<div class="flex items-center gap-4">
+<div class="h-px flex-1 bg-gradient-to-r from-outline-variant to-transparent"></div>
+<span class="text-secondary font-label text-[0.6875rem] tracking-widest">CORE ENGINE 2.0</span>
+</div>
+</div>
+<div class="glass-card p-10 rounded-3xl flex flex-col items-center justify-center text-center space-y-6">
+<div class="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">security</span>
+</div>
+<h3 class="font-headline text-xl font-bold text-primary">Quantum Encryption</h3>
+<p class="text-on-surface-variant text-sm">State-of-the-art protection for your digital assets.</p>
+</div>
+</section>
+</main>
+<!-- Footer Shell -->
+<footer class="w-full py-12 border-t border-[#4d4732]/15 bg-[#0e0e0e]">
+<div class="flex flex-col md:flex-row justify-between items-center px-8 max-w-7xl mx-auto gap-8">
+<div class="flex flex-col items-center md:items-start gap-4">
+<div class="text-lg font-bold text-[#f6f6f6]">Botify Celestial Ledger</div>
+<div class="text-[#d0c6ab] text-[0.6875rem] uppercase font-label">© 2024 Botify Celestial Ledger. All rights reserved.</div>
+</div>
+<div class="flex gap-8">
+<a class="text-[#d0c6ab] hover:text-[#f6f6f6] transition-colors text-sm uppercase font-label tracking-wider" href="#">Privacy Policy</a>
+<a class="text-[#d0c6ab] hover:text-[#f6f6f6] transition-colors text-sm uppercase font-label tracking-wider" href="#">Terms of Service</a>
+<a class="text-[#d0c6ab] hover:text-[#f6f6f6] transition-colors text-sm uppercase font-label tracking-wider" href="#">Security</a>
+</div>
+</div>
+</footer>
+<!-- Decorative Grain Overlay -->
+<div class="fixed inset-0 pointer-events-none z-[100] opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
+</body></html>
