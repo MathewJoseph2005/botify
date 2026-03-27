@@ -90,9 +90,9 @@ const NAV_PUBLIC = [
   { to: '/marketplace', label: 'Marketplace', icon: '🛒' },
 ];
 const NAV_AUTH = [
-  { to: '/dashboard',    label: 'Dashboard',   icon: '🎛️' },
-  { to: '/email-bot',    label: 'Email Bot',   icon: '✉️' },
-  { to: '/whatsapp-bot', label: 'WhatsApp',    icon: '📱' },
+  { to: '/dashboard', label: 'Dashboard', icon: '🎛️' },
+  { to: '/email-bot', label: 'Email Bot', icon: '✉️' },
+  { to: '/whatsapp-bot', label: 'WhatsApp', icon: '📱' },
 ];
 
 /* ── role label helper ───────────────────────────────────────────────────── */

@@ -5,16 +5,16 @@ import FluidOrb from '../components/FluidOrb';
 import GlassCard from '../components/GlassCard';
 
 const featuresList = [
-  { role: 'Global',      label: 'Market Reach',  heading: 'Omnichannel Deployment',   footer: 'WhatsApp, Telegram, Discord.' },
-  { role: 'Seller',      label: 'Monetization',  heading: 'Developer Revenue Share',  footer: 'Automated payouts via Stripe.' },
-  { role: 'Buyer',       label: 'Efficiency',    heading: 'One-Click Bot Ignition',   footer: 'Zero-code setup for buyers.' },
-  { role: 'Security',    label: 'Integrity',     heading: 'Sandboxed Script Audit',   footer: '100% verified bot source code.' },
-  { role: 'Performance', label: 'Speed',         heading: 'Ultra-Low Latency',        footer: '< 200ms message response.' },
-  { role: 'Admin',       label: 'Governance',    heading: 'Role-Based Command',       footer: 'Full RBAC permission control.' },
-  { role: 'Analytics',   label: 'Insights',      heading: 'Real-Time Data Streams',   footer: 'Track every interaction live.' },
-  { role: 'Scale',       label: 'Capacity',      heading: 'Infinite Session Scaling', footer: 'Run 1,000+ bots concurrently.' },
-  { role: 'Support',     label: 'Assistance',    heading: 'AI-Powered Debugging',     footer: 'Auto-healing for broken sessions.' },
-  { role: 'Future',      label: 'Roadmap',       heading: 'Agentic AI Marketplace',   footer: 'Next-gen autonomous assistants.' },
+  { role: 'Global', label: 'Market Reach', heading: 'Omnichannel Deployment', footer: 'WhatsApp, Telegram, Discord.' },
+  { role: 'Seller', label: 'Monetization', heading: 'Developer Revenue Share', footer: 'Automated payouts via Stripe.' },
+  { role: 'Buyer', label: 'Efficiency', heading: 'One-Click Bot Ignition', footer: 'Zero-code setup for buyers.' },
+  { role: 'Security', label: 'Integrity', heading: 'Sandboxed Script Audit', footer: '100% verified bot source code.' },
+  { role: 'Performance', label: 'Speed', heading: 'Ultra-Low Latency', footer: '< 200ms message response.' },
+  { role: 'Admin', label: 'Governance', heading: 'Role-Based Command', footer: 'Full RBAC permission control.' },
+  { role: 'Analytics', label: 'Insights', heading: 'Real-Time Data Streams', footer: 'Track every interaction live.' },
+  { role: 'Scale', label: 'Capacity', heading: 'Infinite Session Scaling', footer: 'Run 1,000+ bots concurrently.' },
+  { role: 'Support', label: 'Assistance', heading: 'AI-Powered Debugging', footer: 'Auto-healing for broken sessions.' },
+  { role: 'Future', label: 'Roadmap', heading: 'Agentic AI Marketplace', footer: 'Next-gen autonomous assistants.' },
 ];
 
 const doubled = [...featuresList, ...featuresList];
@@ -50,8 +50,10 @@ const Starfield = memo(() => {
     <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-80">
       {stars.map((s) => (
         <div key={s.id} className="absolute bg-white rounded-full animate-twinkle"
-          style={{ left: s.left, top: s.top, width: s.size, height: s.size,
-            opacity: s.opacity, animationDelay: s.animationDelay, animationDuration: s.animationDuration }} />
+          style={{
+            left: s.left, top: s.top, width: s.size, height: s.size,
+            opacity: s.opacity, animationDelay: s.animationDelay, animationDuration: s.animationDuration
+          }} />
       ))}
       {shootingStars.map((s) => (
         <div key={s.id} className="absolute animate-shooting"
@@ -103,7 +105,7 @@ const MarqueeCard = memo(({ box }) => {
 
 const STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-  nav.bg-white.shadow-lg.sticky { display: none !important; }
+  .navbar-glass { display: none !important; }
   html { scroll-behavior: smooth; }
   .hide-scrollbar::-webkit-scrollbar { display: none; }
   .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -147,7 +149,7 @@ export default function LandingPage() {
 
         <nav className="relative z-50 flex items-center justify-between px-10 py-8 max-w-[1400px] mx-auto">
           <div className="flex flex-1 items-center">
-            <span className="text-xl font-bold tracking-tight text-blue-600">Botify</span>
+            <span className="text-xl font-bold tracking-tight" style={{ color:'#ffd700', textShadow:'0 0 10px rgba(255,215,0,0.3)' }}>Botify</span>
           </div>
           <div className="hidden md:flex flex-1 items-center justify-center gap-10 text-[13px] font-medium text-white/80">
             <a href="#about-contact" className="hover:text-white transition-colors">About</a>
@@ -155,9 +157,12 @@ export default function LandingPage() {
             <Link to="#" className="hover:text-white transition-colors">FAQ</Link>
             <Link to="#" className="flex items-center gap-1 hover:text-white transition-colors">ENG <ChevronDown className="w-3.5 h-3.5" /></Link>
           </div>
-          <div className="flex flex-1 items-center justify-end gap-4">
-            <Link to="/login" className="text-sm font-medium text-white hover:bg-white/10 transition-colors px-6 py-2.5 bg-[#1a1a1a] rounded-full">Login</Link>
-            <Link to="/signup" className="text-sm font-medium text-black bg-white px-6 py-2.5 rounded-full hover:bg-white/90 transition-colors">Sign up</Link>
+          <div className="flex flex-1 items-center justify-end gap-3.5">
+            <Link to="/login" className="text-sm font-semibold text-white/70 hover:text-white transition-all px-6 py-2 border border-white/10 hover:bg-white/5 rounded-full">Login</Link>
+            <Link to="/signup" className="text-sm font-bold text-[#050505] px-6 py-2 rounded-full transition-all hover:scale-105"
+              style={{ background:'linear-gradient(135deg,#ffd700,#ffe066)', boxShadow:'0 0 15px rgba(255,215,0,0.2)' }}>
+              Sign up
+            </Link>
           </div>
         </nav>
 
