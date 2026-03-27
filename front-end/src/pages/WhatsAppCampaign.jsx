@@ -240,6 +240,23 @@ const WhatsAppCampaign = () => {
     setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleMessageAttachmentSelect = (e) => {
+    if (e.target.files[0]) setMessageAttachment(e.target.files[0]);
+  };
+
+  const getFileIcon = (filename) => {
+    const ext = filename?.split('.').pop()?.toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) return '🖼️';
+    if (['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(ext)) return '🎬';
+    if (['mp3', 'wav', 'ogg', 'aac'].includes(ext)) return '🎵';
+    if (['pdf'].includes(ext)) return '📄';
+    if (['xlsx', 'xls', 'csv'].includes(ext)) return '📊';
+    if (['docx', 'doc'].includes(ext)) return '📝';
+    if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return '🗜️';
+    return '📎';
+  };
+
+
   // ── Send campaign ─────────────────────────────────────────────────────
   const handleSendCampaign = async (e) => {
     e.preventDefault();

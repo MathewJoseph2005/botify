@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { botAPI } from '../utils/api';
+import { botAPI, whatsappAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 
 const WhatsAppBot = () => {
@@ -79,11 +79,12 @@ const WhatsAppBot = () => {
       setCampaignLoading(true);
       const formData = new FormData();
       formData.append('messageBody', messageBody);
+      formData.append('campaignName', selectedBot?.bot_name || 'WA Campaign');
       if (scheduledTime) formData.append('scheduledTime', scheduledTime);
       formData.append('excelFile', excelFile);
       if (attachment) formData.append('attachment', attachment);
 
-      const response = await botAPI.whatsappCampaign(selectedBotId, formData);
+      const response = await whatsappAPI.sendCampaign(formData);
       if (response.data.success) {
         setResult({ type: 'success', message: response.data.message });
         setMessageBody('');
@@ -134,19 +135,19 @@ const WhatsAppBot = () => {
             <button onClick={() => setShowCreateBotModal(true)} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition">+ Create Bot</button>
           </div>
 
-          {bots.filter(b => b.type === 'whatsapp').length === 0 ? (
+          {bots.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <p className="mb-4">No WhatsApp bots yet. Create one to get started!</p>
               <button onClick={() => setShowCreateBotModal(true)} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition">Create Your First WhatsApp Bot</button>
             </div>
           ) : (
             <div className="grid gap-3">
-              {bots.filter(b => b.type === 'whatsapp').map((bot) => (
+              {bots.map((bot) => (
                 <div key={bot.bot_id} className={`p-4 border rounded-lg`}> 
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <h3 className="font-semibold text-gray-900">{bot.bot_name}</h3>
-                      <p className="text-sm text-gray-600">{bot.bot_phone || 'No phone set'}</p>
+                      <p className="text-sm text-gray-600">Bot ID: {bot.bot_id}</p>
                     </div>
                   </div>
                   <p className="text-xs text-gray-500">Created: {new Date(bot.created_at).toLocaleDateString()}</p>
@@ -159,7 +160,7 @@ const WhatsAppBot = () => {
         {selectedBot && (
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-gray-700"><strong>Active Bot:</strong> {selectedBot.bot_name} ({selectedBot.bot_phone || 'no phone'})</p>
+              <p className="text-sm text-gray-700"><strong>Active Bot:</strong> {selectedBot.bot_name}</p>
             </div>
 
             <div className="bg-white rounded-lg shadow p-6">
@@ -199,7 +200,7 @@ const WhatsAppBot = () => {
           </form>
         )}
 
-        {bots.filter(b => b.type === 'whatsapp').length === 0 && (
+        {bots.length === 0 && (
           <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">Create a WhatsApp bot first to send campaigns.</div>
         )}
 
