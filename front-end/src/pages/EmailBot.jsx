@@ -29,7 +29,7 @@ const EmailBot = () => {
   const [messageBody, setMessageBody] = useState('');
   const [scheduledTime, setScheduledTime] = useState('');
   const [excelFile, setExcelFile] = useState(null);
-  const [attachment, setAttachment] = useState(null);
+  const [attachments, setAttachments] = useState([]);
 
   // ── Campaign History State ──────────────────────────────────────────────
   const [campaigns, setCampaigns] = useState([]);
@@ -219,7 +219,7 @@ const EmailBot = () => {
       formData.append('messageBody', messageBody);
       if (scheduledTime) formData.append('scheduledTime', scheduledTime);
       formData.append('excelFile', excelFile);
-      if (attachment) formData.append('attachment', attachment);
+      attachments.forEach((file) => formData.append('attachment', file));
 
       const response = await botAPI.emailCampaign(selectedBotId, formData);
       if (response.data.success) {
@@ -228,7 +228,7 @@ const EmailBot = () => {
         setMessageBody('');
         setScheduledTime('');
         setExcelFile(null);
-        setAttachment(null);
+        setAttachments([]);
         fetchCampaigns(); // refresh campaign history
       }
     } catch (err) {
@@ -434,15 +434,36 @@ const EmailBot = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Attachment (Optional)
+                    Attachments (Optional)
                   </label>
-                  <input
-                    type="file"
-                    onChange={(e) => setAttachment(e.target.files?.[0] || null)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
-                  {attachment && (
-                    <p className="text-xs text-gray-600 mt-1">✓ {attachment.name}</p>
+                  <label className="cursor-pointer bg-gray-50 border border-gray-300 hover:bg-gray-100 px-4 py-2 rounded-lg text-sm font-medium text-gray-700 transition inline-block mb-2">
+                    <span>Choose Files</span>
+                    <input
+                      type="file"
+                      multiple
+                      onChange={(e) => {
+                        if (e.target.files.length) {
+                          setAttachments((prev) => [...prev, ...Array.from(e.target.files)]);
+                        }
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                  {attachments.length > 0 && (
+                    <div className="flex flex-col gap-1 mt-1">
+                      {attachments.map((file, idx) => (
+                        <div key={idx} className="flex justify-between items-center bg-gray-50 p-1 px-2 rounded border border-gray-200 text-xs text-gray-600">
+                          <span className="truncate">{file.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => setAttachments((prev) => prev.filter((_, i) => i !== idx))}
+                            className="text-red-500 hover:text-red-700 font-bold ml-2"
+                          >
+                            &times;
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>

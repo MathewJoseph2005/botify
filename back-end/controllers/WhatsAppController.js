@@ -125,7 +125,7 @@ class WhatsAppController {
   }
 
   // ── Send a single message ───────────────────────────────────────────────
-  async sendMessage(phoneNumber, message) {
+  async sendMessage(phoneNumber, message, mediaPaths = []) {
     if (!this.isReady) {
       throw new Error('WhatsApp client is not ready. Please scan the QR code first.');
     }
@@ -140,7 +140,26 @@ class WhatsAppController {
       throw new Error(`Number ${phoneNumber} is not registered on WhatsApp.`);
     }
 
-    await this.client.sendMessage(chatId, message);
+    if (mediaPaths && mediaPaths.length > 0) {
+      const { MessageMedia } = pkg;
+      for (let i = 0; i < mediaPaths.length; i++) {
+        try {
+          const media = MessageMedia.fromFilePath(mediaPaths[i]);
+          const options = (i === 0 && message) ? { caption: message } : {};
+          await this.client.sendMessage(chatId, media, options);
+        } catch (err) {
+          console.error(`[WhatsApp] Failed to load media ${mediaPaths[i]}:`, err.message);
+          // Fallback to text message if first media fails
+          if (i === 0 && message) {
+            await this.client.sendMessage(chatId, message);
+          }
+        }
+      }
+    } else {
+      if (message) {
+        await this.client.sendMessage(chatId, message);
+      }
+    }
   }
 
   // ── Destroy the client ──────────────────────────────────────────────────
