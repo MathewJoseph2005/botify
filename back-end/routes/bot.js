@@ -969,20 +969,12 @@ router.post('/whatsapp-campaign', verifyToken, (req, res, next) => {
       .eq('id', campaign.id);
 
     cleanupFile(excelPath);
-<<<<<<< HEAD
-    if (attachmentPath) cleanupFile(attachmentPath);
-=======
     attachmentFiles.forEach(file => cleanupFile(file.path));
->>>>>>> d3e0124132e7429294c5cfe38776e23772bb7902
     console.log(`[WA Campaign] Completed – sent: ${sent}, failed: ${failed}`);
   } catch (err) {
     console.error('WhatsApp campaign error:', err);
     cleanupFile(excelPath);
-<<<<<<< HEAD
-    if (attachmentPath) cleanupFile(attachmentPath);
-=======
     attachmentFiles.forEach(file => cleanupFile(file.path));
->>>>>>> d3e0124132e7429294c5cfe38776e23772bb7902
     // Campaign may already have been recorded – try to mark it failed
     // (response already sent, so we can't respond here)
   }
