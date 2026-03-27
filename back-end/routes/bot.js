@@ -42,7 +42,7 @@ const upload = multer({
 
 const uploadFields = upload.fields([
   { name: 'excelFile', maxCount: 1 },
-  { name: 'attachment', maxCount: 1 },
+  { name: 'attachment', maxCount: 10 },
 ]);
 
 // ---------------------------------------------------------------------------
@@ -412,7 +412,7 @@ router.post('/email-campaign/:botId', verifyToken, uploadFields, async (req, res
     }
 
     const excelPath = req.files.excelFile[0].path;
-    const attachmentFile = req.files.attachment?.[0] || null;
+    const attachmentFiles = req.files.attachment || [];
 
     // ---- Parse emails ----
     let emails;
@@ -420,7 +420,7 @@ router.post('/email-campaign/:botId', verifyToken, uploadFields, async (req, res
       emails = parseEmails(excelPath);
     } catch (err) {
       cleanupFile(excelPath);
-      if (attachmentFile) cleanupFile(attachmentFile.path);
+      attachmentFiles.forEach(file => cleanupFile(file.path));
       return res.status(400).json({
         success: false,
         message: 'Failed to parse the Excel file. Make sure it has an "Email" column.',
@@ -429,7 +429,7 @@ router.post('/email-campaign/:botId', verifyToken, uploadFields, async (req, res
 
     if (emails.length === 0) {
       cleanupFile(excelPath);
-      if (attachmentFile) cleanupFile(attachmentFile.path);
+      attachmentFiles.forEach(file => cleanupFile(file.path));
       return res.status(400).json({
         success: false,
         message: 'No valid email addresses found in the uploaded file.',
@@ -452,13 +452,11 @@ router.post('/email-campaign/:botId', verifyToken, uploadFields, async (req, res
         html: messageBody,
       };
 
-      if (attachmentFile) {
-        mailOptions.attachments = [
-          {
-            filename: attachmentFile.originalname,
-            path: attachmentFile.path,
-          },
-        ];
+      if (attachmentFiles.length > 0) {
+        mailOptions.attachments = attachmentFiles.map(f => ({
+          filename: f.originalname,
+          path: f.path,
+        }));
       }
 
       let sent = 0;
@@ -475,7 +473,7 @@ router.post('/email-campaign/:botId', verifyToken, uploadFields, async (req, res
 
       // Clean up files after campaign completes
       cleanupFile(excelPath);
-      if (attachmentFile) cleanupFile(attachmentFile.path);
+      attachmentFiles.forEach(file => cleanupFile(file.path));
 
       // Update campaign record with results
       await supabase
@@ -497,7 +495,7 @@ router.post('/email-campaign/:botId', verifyToken, uploadFields, async (req, res
 
       if (isNaN(scheduledDate.getTime()) || scheduledDate <= new Date()) {
         cleanupFile(excelPath);
-        if (attachmentFile) cleanupFile(attachmentFile.path);
+        attachmentFiles.forEach(file => cleanupFile(file.path));
         return res.status(400).json({
           success: false,
           message: 'Scheduled time must be a valid future date.',
@@ -840,10 +838,10 @@ router.post('/whatsapp/logout', verifyToken, async (_req, res) => {
 
 // ---------------------------------------------------------------------------
 // POST /api/bot/whatsapp-campaign
-// Accept Excel file + messageBody, run bulk WhatsApp campaign
+// Accept Excel file + messageBody + attachment, run bulk WhatsApp campaign
 // ---------------------------------------------------------------------------
 router.post('/whatsapp-campaign', verifyToken, (req, res, next) => {
-  waUpload(req, res, (err) => {
+  uploadFields(req, res, (err) => {
     if (err) {
       return res.status(400).json({ success: false, message: err.message });
     }
@@ -851,30 +849,35 @@ router.post('/whatsapp-campaign', verifyToken, (req, res, next) => {
   });
 }, async (req, res) => {
   const { messageBody, campaignName } = req.body;
+  const attachmentFiles = req.files?.attachment || [];
 
   // ── Validation ────────────────────────────────────────────────────────
   if (!messageBody) {
+    if (req.files?.excelFile?.[0]) cleanupFile(req.files.excelFile[0].path);
+    attachmentFiles.forEach(file => cleanupFile(file.path));
     return res.status(400).json({ success: false, message: 'messageBody is required.' });
   }
 
-  if (!req.files || !req.files.excelFile || req.files.excelFile.length === 0) {
+  if (!req.files || !req.files.excelFile || !req.files.excelFile[0]) {
+    attachmentFiles.forEach(file => cleanupFile(file.path));
     return res.status(400).json({
       success: false,
       message: 'An Excel/CSV file with recipient data is required.',
     });
   }
 
+  const excelPath = req.files.excelFile[0].path;
+  const attachmentPaths = attachmentFiles.map(f => f.path);
+
   if (!whatsappController.isReady) {
-    if (req.files.excelFile) cleanupFile(req.files.excelFile[0].path);
-    if (req.files.messageAttachment) cleanupFile(req.files.messageAttachment[0].path);
+    cleanupFile(excelPath);
+    attachmentFiles.forEach(file => cleanupFile(file.path));
     return res.status(400).json({
       success: false,
       message: 'WhatsApp client is not connected. Please scan the QR code first.',
     });
   }
 
-  const excelPath = req.files.excelFile[0].path;
-  const attachmentPath = req.files.messageAttachment ? req.files.messageAttachment[0].path : null;
 
   try {
     // ── Parse recipients ──────────────────────────────────────────────
@@ -883,7 +886,7 @@ router.post('/whatsapp-campaign', verifyToken, (req, res, next) => {
       recipients = parseWhatsAppRecipients(excelPath);
     } catch (parseErr) {
       cleanupFile(excelPath);
-      if (attachmentPath) cleanupFile(attachmentPath);
+      attachmentFiles.forEach(file => cleanupFile(file.path));
       return res.status(400).json({
         success: false,
         message: 'Failed to parse the Excel file. Use a column like "whatsapp_number", "phone", or upload a single-column phone list.',
@@ -892,7 +895,7 @@ router.post('/whatsapp-campaign', verifyToken, (req, res, next) => {
 
     if (recipients.length === 0) {
       cleanupFile(excelPath);
-      if (attachmentPath) cleanupFile(attachmentPath);
+      attachmentFiles.forEach(file => cleanupFile(file.path));
       return res.status(400).json({
         success: false,
         message: 'No valid recipients found. Add phone numbers with 8-15 digits (with country code) in a phone/whatsapp column or first column.',
@@ -916,7 +919,7 @@ router.post('/whatsapp-campaign', verifyToken, (req, res, next) => {
     if (campaignErr) {
       console.error('Failed to create WhatsApp campaign record:', campaignErr);
       cleanupFile(excelPath);
-      if (attachmentPath) cleanupFile(attachmentPath);
+      attachmentFiles.forEach(file => cleanupFile(file.path));
       return res.status(500).json({ success: false, message: 'Failed to create campaign record.' });
     }
 
@@ -936,13 +939,7 @@ router.post('/whatsapp-campaign', verifyToken, (req, res, next) => {
       try {
         // Replace {{name}} placeholder
         const personalised = messageBody.replace(/\{\{name\}\}/gi, recipient.name || '');
-        
-        // Send with or without attachment
-        if (attachmentPath) {
-          await whatsappController.sendMessageWithMedia(recipient.phone, personalised, attachmentPath);
-        } else {
-          await whatsappController.sendMessage(recipient.phone, personalised);
-        }
+        await whatsappController.sendMessage(recipient.phone, personalised, attachmentPaths);
         sent++;
       } catch (sendErr) {
         console.error(`[WA Campaign] Failed to send to ${recipient.phone}:`, sendErr.message);
@@ -972,12 +969,20 @@ router.post('/whatsapp-campaign', verifyToken, (req, res, next) => {
       .eq('id', campaign.id);
 
     cleanupFile(excelPath);
+<<<<<<< HEAD
     if (attachmentPath) cleanupFile(attachmentPath);
+=======
+    attachmentFiles.forEach(file => cleanupFile(file.path));
+>>>>>>> d3e0124132e7429294c5cfe38776e23772bb7902
     console.log(`[WA Campaign] Completed – sent: ${sent}, failed: ${failed}`);
   } catch (err) {
     console.error('WhatsApp campaign error:', err);
     cleanupFile(excelPath);
+<<<<<<< HEAD
     if (attachmentPath) cleanupFile(attachmentPath);
+=======
+    attachmentFiles.forEach(file => cleanupFile(file.path));
+>>>>>>> d3e0124132e7429294c5cfe38776e23772bb7902
     // Campaign may already have been recorded – try to mark it failed
     // (response already sent, so we can't respond here)
   }
