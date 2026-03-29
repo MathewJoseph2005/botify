@@ -57,6 +57,12 @@ export const botAPI = {
   }),
   getCampaigns: () => api.get('/bot/campaigns'),
   getCampaign: (campaignId) => api.get(`/bot/campaigns/${campaignId}`),
+  // Email Forwarding API
+  getEmailForwardingConfigs: () => api.get('/bot/email-forwarding'),
+  createEmailForwardingConfig: (config) => api.post('/bot/email-forwarding', config),
+  updateEmailForwardingConfig: (configId, config) => api.put(`/bot/email-forwarding/${configId}`, config),
+  deleteEmailForwardingConfig: (configId) => api.delete(`/bot/email-forwarding/${configId}`),
+  testEmailForwarding: (configId) => api.post(`/bot/email-forwarding/${configId}/test`),
 };
 
 // WhatsApp API

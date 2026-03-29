@@ -9,6 +9,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import SellerDashboard from './pages/SellerDashboard';
 import BuyerDashboard from './pages/BuyerDashboard';
 import EmailBot from './pages/EmailBot';
+import EmailForwarding from './pages/EmailForwarding';
 import WhatsAppCampaign from './pages/WhatsAppCampaign';
 import CreateMarketplaceBotPage from './pages/CreateMarketplaceBotPage';
 import Unauthorized from './pages/Unauthorized';
@@ -91,6 +92,14 @@ function App() {
             element={
               <PrivateRoute allowedRoles={[1, 2, 3]}>
                 <EmailBot />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/email-forwarding"
+            element={
+              <PrivateRoute allowedRoles={[2]}>
+                <EmailForwarding />
               </PrivateRoute>
             }
           />

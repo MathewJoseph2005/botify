@@ -6,6 +6,7 @@ import authRoutes from './routes/auth.js';
 import botRoutes from './routes/bot.js';
 import marketplaceRoutes from './routes/marketplace.js';
 import telegramBotFactory from './services/telegramBotFactory.js';
+import emailForwardingService from './services/EmailForwardingService.js';
 import './config/database.js'; // Initialize Supabase connection
 
 // Load environment variables
@@ -17,25 +18,32 @@ const PORT = parseInt(process.env.PORT || 5000, 10);
 // Rate limiters
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 30, // 30 requests per window per IP (login/signup)
+  max: 100, // 100 requests per window per IP (login/signup)
   message: {
     success: false,
     message: 'Too many requests. Please try again after 15 minutes.',
   },
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => req.path.startsWith('/admin/'), // Admin data routes use general limiter only
+  skip: (req) => {
+    const ip = req.ip || req.connection.remoteAddress;
+    return ip === '127.0.0.1' || ip === '::1' || ip === 'localhost';
+  },
 });
 
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: 500,
   message: {
     success: false,
     message: 'Too many requests. Please slow down.',
   },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    const ip = req.ip || req.connection.remoteAddress;
+    return ip === '127.0.0.1' || ip === '::1' || ip === 'localhost';
+  },
 });
 
 // Middleware
@@ -98,6 +106,14 @@ const startServer = (port) => {
     } catch (err) {
       console.error('Telegram Bot Factory failed to initialize:', err.message);
     }
+
+    // Start Email Forwarding Service
+    try {
+      await emailForwardingService.start();
+      console.log('✅ Email Forwarding Service started');
+    } catch (err) {
+      console.error('Email Forwarding Service failed to initialize:', err.message);
+    }
   });
 
   // Handle port already in use error
@@ -114,32 +130,31 @@ const startServer = (port) => {
   });
 };
 
-// Handle graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('\n📌 SIGTERM signal received: closing HTTP server');
-  server.close(() => {
-    console.log('✅ HTTP server closed');
-    process.exit(0);
-  });
-});
-
-process.on('SIGINT', () => {
-  console.log('\n📌 SIGINT signal received: closing HTTP server');
-  server.close(() => {
-    console.log('✅ HTTP server closed');
-    process.exit(0);
-  });
-});
-
 startServer(PORT);
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM signal received: closing HTTP server');
-  telegramBotFactory
-    .shutdown()
-    .catch((err) => console.error('Telegram Bot Factory shutdown error:', err.message))
-    .finally(() => process.exit(0));
-});
+// Graceful shutdown - unified handler
+const gracefulShutdown = async () => {
+  console.log('\n📌 Shutdown signal received: closing services');
+  
+  // Close HTTP server
+  if (server) {
+    server.close(() => {
+      console.log('✅ HTTP server closed');
+    });
+  }
+
+  // Shutdown Telegram bot factory
+  try {
+    await telegramBotFactory.shutdown();
+    console.log('✅ Telegram Bot Factory shutdown complete');
+  } catch (err) {
+    console.error('⚠️ Telegram Bot Factory shutdown error:', err.message);
+  }
+
+  process.exit(0);
+};
+
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
 
 export default app;

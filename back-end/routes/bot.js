@@ -2,12 +2,13 @@ import express from 'express';
 import multer from 'multer';
 import XLSX from 'xlsx';
 import schedule from 'node-schedule';
-import nodemailer from 'nodemailer';
 import path from 'path';
 import fs from 'fs';
 import verifyToken from '../middleware/auth.js';
 import supabase from '../config/database.js';
+import emailForwardingSupabase from '../config/emailForwardingDatabase.js';
 import whatsappController from '../controllers/WhatsAppController.js';
+import { createTransporter } from '../utils/emailTransporter.js';
 
 const router = express.Router();
 
@@ -44,37 +45,6 @@ const uploadFields = upload.fields([
   { name: 'excelFile', maxCount: 1 },
   { name: 'attachment', maxCount: 10 },
 ]);
-
-// ---------------------------------------------------------------------------
-// Helper – create a nodemailer transporter from user-supplied credentials
-// ---------------------------------------------------------------------------
-function createTransporter(senderEmail, appPassword) {
-  // Detect the SMTP host from the sender email domain
-  const domain = senderEmail.split('@')[1]?.toLowerCase();
-  let host = 'smtp.gmail.com';
-  let port = 465;
-  let secure = true;
-
-  if (domain?.includes('outlook') || domain?.includes('hotmail') || domain?.includes('live')) {
-    host = 'smtp-mail.outlook.com';
-    port = 587;
-    secure = false;
-  } else if (domain?.includes('yahoo')) {
-    host = 'smtp.mail.yahoo.com';
-    port = 465;
-    secure = true;
-  }
-
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    auth: {
-      user: senderEmail,
-      pass: appPassword, // app-specific password
-    },
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Helper – parse emails from the uploaded Excel / CSV file
@@ -119,15 +89,9 @@ router.get('/list', verifyToken, async (req, res) => {
 
     if (error) throw error;
 
-    // Add system email to each bot
-    const botsWithEmail = bots.map(bot => ({
-      ...bot,
-      bot_email: process.env.BOT_EMAIL
-    }));
-
     res.status(200).json({
       success: true,
-      bots: botsWithEmail || [],
+      bots: bots || [],
     });
   } catch (err) {
     console.error('Error fetching bots:', err);
@@ -175,20 +139,15 @@ router.post('/create', verifyToken, async (req, res) => {
           is_active: true,
         },
       ])
-      .select('bot_id, bot_name, is_active, created_at');
+      .select('bot_id, bot_name, is_active, created_at')
+      .single();
 
     if (insertError) throw insertError;
-
-    // Add system email to response
-    const botWithEmail = {
-      ...newBot[0],
-      bot_email: process.env.BOT_EMAIL
-    };
 
     res.status(201).json({
       success: true,
       message: 'Bot created successfully.',
-      bot: botWithEmail,
+      bot: newBot,
     });
   } catch (err) {
     console.error('Error creating bot:', err);
@@ -1114,6 +1073,198 @@ router.get('/whatsapp-campaigns/:campaignId', verifyToken, async (req, res) => {
   } catch (err) {
     console.error('Error fetching WhatsApp campaign:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch campaign details.' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// EMAIL FORWARDING BOT ROUTES
+// Requires separate Supabase instance configured via:
+// - EMAIL_FORWARDING_SUPABASE_URL
+// - EMAIL_FORWARDING_SUPABASE_SERVICE_KEY
+// ---------------------------------------------------------------------------
+
+// Handler to check Email Forwarding Supabase is configured
+const checkEmailForwardingSupabase = (req, res, next) => {
+  if (!emailForwardingSupabase) {
+    return res.status(503).json({
+      success: false,
+      message: 'Email Forwarding feature is not configured. Please contact administrator.',
+    });
+  }
+  next();
+};
+
+// GET - List all email forwarding configurations for the user
+router.get('/email-forwarding', verifyToken, checkEmailForwardingSupabase, async (req, res) => {
+  try {
+    const { data: configs, error } = await emailForwardingSupabase
+      .from('email_forwarding_configs')
+      .select('*')
+      .eq('user_id', req.user.user_id)
+      .order('created_at', { ascending: false });
+
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
+
+    res.status(200).json({ success: true, configs: configs || [] });
+  } catch (err) {
+    console.error('Error fetching email forwarding configs:', err.message);
+    res.status(500).json({ success: false, message: 'Failed to fetch configurations.' });
+  }
+});
+
+// POST - Create a new email forwarding configuration
+router.post('/email-forwarding', verifyToken, checkEmailForwardingSupabase, async (req, res) => {
+  try {
+    const { name, description, email, password, forward_label, recipient_emails, enabled } = req.body;
+
+    // Trim all string fields to prevent issues with spaces
+    const trimmedName = name ? name.trim() : null;
+    const trimmedEmail = email ? email.trim() : null;
+    const trimmedPassword = password ? password.trim() : null;
+    const trimmedLabel = forward_label ? forward_label.trim() : 'forward';
+
+    // Validation
+    if (!trimmedName || !trimmedEmail || !trimmedPassword || !recipient_emails || !Array.isArray(recipient_emails)) {
+      return res.status(400).json({ success: false, message: 'Missing required fields.' });
+    }
+
+    const { data: config, error: insertError } = await emailForwardingSupabase
+      .from('email_forwarding_configs')
+      .insert([{
+        user_id: req.user.user_id,
+        name: trimmedName,
+        description: description ? description.trim() : null,
+        email: trimmedEmail,
+        password: trimmedPassword, // In production, encrypt this!
+        forward_label: trimmedLabel,
+        recipient_emails: recipient_emails.map(e => e.trim()),
+        enabled: enabled !== false,
+        emails_checked: 0,
+        emails_forwarded: 0,
+      }])
+      .select()
+      .single();
+
+    if (insertError) {
+      throw insertError;
+    }
+
+    res.status(201).json({ success: true, config, message: 'Email forwarding config created.' });
+  } catch (err) {
+    console.error('Error creating email forwarding config:', err.message);
+    res.status(500).json({ success: false, message: 'Failed to create configuration.' });
+  }
+});
+
+// PUT - Update email forwarding configuration
+router.put('/email-forwarding/:configId', verifyToken, checkEmailForwardingSupabase, async (req, res) => {
+  try {
+    const { configId } = req.params;
+    const { name, description, email, password, forward_label, recipient_emails, enabled } = req.body;
+
+    // Verify ownership
+    const { data: config, error: fetchError } = await emailForwardingSupabase
+      .from('email_forwarding_configs')
+      .select('id')
+      .eq('id', configId)
+      .eq('user_id', req.user.user_id)
+      .single();
+
+    if (fetchError || !config) {
+      return res.status(404).json({ success: false, message: 'Configuration not found.' });
+    }
+
+    const updateData = {};
+    if (name !== undefined) updateData.name = name.trim();
+    if (description !== undefined) updateData.description = description ? description.trim() : null;
+    if (email !== undefined) updateData.email = email.trim();
+    if (password !== undefined) updateData.password = password.trim();
+    if (forward_label !== undefined) updateData.forward_label = forward_label.trim();
+    if (recipient_emails !== undefined) {
+      updateData.recipient_emails = Array.isArray(recipient_emails) 
+        ? recipient_emails.map(e => e.trim()) 
+        : [recipient_emails.trim()];
+    }
+    if (enabled !== undefined) updateData.enabled = enabled;
+
+    const { data: updated, error: updateError } = await emailForwardingSupabase
+      .from('email_forwarding_configs')
+      .update(updateData)
+      .eq('id', configId)
+      .select()
+      .single();
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    res.status(200).json({ success: true, config: updated, message: 'Configuration updated.' });
+  } catch (err) {
+    console.error('Error updating email forwarding config:', err.message);
+    res.status(500).json({ success: false, message: 'Failed to update configuration.' });
+  }
+});
+
+// DELETE - Delete email forwarding configuration
+router.delete('/email-forwarding/:configId', verifyToken, checkEmailForwardingSupabase, async (req, res) => {
+  try {
+    const { configId } = req.params;
+
+    // Verify ownership
+    const { data: config, error: fetchError } = await emailForwardingSupabase
+      .from('email_forwarding_configs')
+      .select('id')
+      .eq('id', configId)
+      .eq('user_id', req.user.user_id)
+      .single();
+
+    if (fetchError || !config) {
+      return res.status(404).json({ success: false, message: 'Configuration not found.' });
+    }
+
+    const { error: deleteError } = await emailForwardingSupabase
+      .from('email_forwarding_configs')
+      .delete()
+      .eq('id', configId);
+
+    if (deleteError) {
+      throw deleteError;
+    }
+
+    res.status(200).json({ success: true, message: 'Configuration deleted.' });
+  } catch (err) {
+    console.error('Error deleting email forwarding config:', err.message);
+    res.status(500).json({ success: false, message: 'Failed to delete configuration.' });
+  }
+});
+
+// POST - Test email forwarding connection
+router.post('/email-forwarding/:configId/test', verifyToken, checkEmailForwardingSupabase, async (req, res) => {
+  try {
+    const { configId } = req.params;
+
+    // Fetch config
+    const { data: config, error: fetchError } = await emailForwardingSupabase
+      .from('email_forwarding_configs')
+      .select('*')
+      .eq('id', configId)
+      .eq('user_id', req.user.user_id)
+      .single();
+
+    if (fetchError || !config) {
+      return res.status(404).json({ success: false, message: 'Configuration not found.' });
+    }
+
+    // Test IMAP connection with given credentials
+    const transporter = createTransporter(config.email, config.password);
+    await transporter.verify();
+
+    res.status(200).json({ success: true, message: 'Email connection verified successfully!' });
+  } catch (err) {
+    console.error('Error testing email forwarding connection:', err.message);
+    res.status(400).json({ success: false, message: `Connection test failed: ${err.message}` });
   }
 });
 

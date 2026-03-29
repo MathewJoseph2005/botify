@@ -2,9 +2,9 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import nodemailer from 'nodemailer';
 import supabase from '../config/database.js';
 import verifyToken, { isAdmin } from '../middleware/auth.js';
+import { createSystemTransporter } from '../utils/emailTransporter.js';
 
 const router = express.Router();
 
@@ -224,19 +224,8 @@ router.post('/login', async (req, res) => {
 });
 
 // Verify token endpoint (optional - for checking if token is still valid)
-router.get('/verify', async (req, res) => {
-  const token = req.headers['authorization']?.split(' ')[1];
-
-  if (!token) {
-    return res.status(403).json({ 
-      success: false, 
-      message: 'No token provided.' 
-    });
-  }
-
+router.get('/verify', verifyToken, async (req, res) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
     // Fetch user details
     const { data: user, error: userError } = await supabase
       .from('users')
@@ -248,7 +237,7 @@ router.get('/verify', async (req, res) => {
         role_id,
         roles!inner (role_name)
       `)
-      .eq('user_id', decoded.user_id)
+      .eq('user_id', req.user.user_id)
       .single();
 
     if (userError || !user) {
@@ -270,34 +259,14 @@ router.get('/verify', async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(401).json({ 
+    res.status(500).json({ 
       success: false, 
-      message: 'Invalid or expired token.' 
+      message: 'Server error. Please try again later.' 
     });
   }
 });
 
 // ==================== PASSWORD RESET ====================
-
-// Helper – create email transporter
-function createMailTransporter() {
-  const email = process.env.BOT_EMAIL;
-  const pass = process.env.BOT_PASSWORD;
-  if (!email || !pass) return null;
-
-  const domain = email.split('@')[1]?.toLowerCase();
-  let host = 'smtp.gmail.com';
-  let port = 465;
-  let secure = true;
-
-  if (domain?.includes('outlook') || domain?.includes('hotmail') || domain?.includes('live')) {
-    host = 'smtp-mail.outlook.com'; port = 587; secure = false;
-  } else if (domain?.includes('yahoo')) {
-    host = 'smtp.mail.yahoo.com';
-  }
-
-  return nodemailer.createTransport({ host, port, secure, auth: { user: email, pass } });
-}
 
 // POST /forgot-password – send a reset link via email
 router.post('/forgot-password', async (req, res) => {
@@ -350,7 +319,7 @@ router.post('/forgot-password', async (req, res) => {
     const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
 
     // Send email
-    const transporter = createMailTransporter();
+    const transporter = createSystemTransporter();
     if (transporter) {
       await transporter.sendMail({
         from: process.env.BOT_EMAIL,

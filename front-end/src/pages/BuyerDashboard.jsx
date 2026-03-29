@@ -21,9 +21,10 @@ const BuyerDashboard = () => {
       setLoading(true);
       const response = await botAPI.listBots();
       if (response.data.success) {
-        setBots(response.data.bots);
+        setBots(response.data.bots || []);
       }
     } catch (err) {
+      console.error('Failed to fetch bots:', err);
       setError(err.response?.data?.message || 'Failed to fetch bots.');
     } finally {
       setLoading(false);
@@ -34,10 +35,11 @@ const BuyerDashboard = () => {
     try {
       const response = await marketplaceAPI.getMyPurchases();
       if (response.data.success) {
-        setPurchases(response.data.purchases);
+        setPurchases(response.data.purchases || []);
       }
     } catch (err) {
-      // silently fail
+      console.error('Failed to fetch purchases:', err);
+      // silently fail for purchases
     }
   };
 
@@ -124,7 +126,13 @@ const BuyerDashboard = () => {
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900">Quick Actions</h2>
           </div>
-          <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Link
+              to="/email-forwarding"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg transition duration-200 text-center"
+            >
+              Email Forwarding
+            </Link>
             <Link
               to="/marketplace"
               className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg transition duration-200 text-center"
