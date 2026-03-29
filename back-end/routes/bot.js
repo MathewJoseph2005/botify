@@ -9,6 +9,7 @@ import supabase from '../config/database.js';
 import emailForwardingSupabase from '../config/emailForwardingDatabase.js';
 import whatsappController from '../controllers/WhatsAppController.js';
 import { createTransporter } from '../utils/emailTransporter.js';
+import { google } from 'googleapis';
 
 const router = express.Router();
 
@@ -1265,6 +1266,72 @@ router.post('/email-forwarding/:configId/test', verifyToken, checkEmailForwardin
   } catch (err) {
     console.error('Error testing email forwarding connection:', err.message);
     res.status(400).json({ success: false, message: `Connection test failed: ${err.message}` });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GOOGLE OAUTH ROUTES FOR EMAIL FORWARDING
+// ---------------------------------------------------------------------------
+
+function getOAuthClient() {
+  return new google.auth.OAuth2(
+    process.env.EMAIL_FORWARDING_CLIENT_ID,
+    process.env.EMAIL_FORWARDING_CLIENT_SECRET,
+    process.env.EMAIL_FORWARDING_REDIRECT_URI || 'http://localhost:5173/email-forwarding'
+  );
+}
+
+// GET - Generate OAuth Consent URL
+router.get('/email-forwarding/oauth/url', verifyToken, (req, res) => {
+  try {
+    const oauth2Client = getOAuthClient();
+    const url = oauth2Client.generateAuthUrl({
+      access_type: 'offline', // Necessary to get a refresh token
+      prompt: 'consent',      // Forces Google to send a refresh token
+      scope: ['https://mail.google.com/'],
+    });
+    res.status(200).json({ success: true, url });
+  } catch (error) {
+    console.error('Error generating Google OAuth URL:', error.message);
+    res.status(500).json({ success: false, message: 'Failed to generate OAuth URL.' });
+  }
+});
+
+// POST - Handle OAuth Callback (Exchange code for tokens)
+router.post('/email-forwarding/oauth/callback', verifyToken, async (req, res) => {
+  try {
+    const { code } = req.body;
+    if (!code) return res.status(400).json({ success: false, message: 'Authorization code missing.' });
+
+    const oauth2Client = getOAuthClient();
+    const { tokens } = await oauth2Client.getToken(code);
+    
+    // tokens.refresh_token is what we need to store in place of the password
+    res.status(200).json({ success: true, tokens });
+  } catch (error) {
+    console.error('OAuth callback exchange error:', error.message);
+    res.status(500).json({ success: false, message: 'Failed to exchange OAuth code.' });
+  }
+});
+
+// GET - Fetch Email Forwarding Logs
+router.get('/email-forwarding-logs', verifyToken, checkEmailForwardingSupabase, async (req, res) => {
+  try {
+    const { data: logs, error } = await emailForwardingSupabase
+      .from('email_forwarding_logs')
+      .select('*')
+      .eq('user_id', req.user.user_id)
+      .order('forwarded_at', { ascending: false })
+      .limit(500);
+
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
+
+    res.status(200).json({ success: true, logs: logs || [] });
+  } catch (error) {
+    console.error('Error fetching email forwarding logs:', error.message);
+    res.status(500).json({ success: false, message: 'Failed to fetch logs.' });
   }
 });
 

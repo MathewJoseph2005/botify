@@ -1,13 +1,19 @@
 import { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { botAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/ConfirmModal';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const EmailForwarding = () => {
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   // ── Configuration Management State ──────────────────────────────────────
   const [configs, setConfigs] = useState([]);
+  const [logs, setLogs] = useState([]);
+  const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [configsLoading, setConfigsLoading] = useState(false);
   const [testLoading, setTestLoading] = useState(false);
@@ -35,7 +41,67 @@ const EmailForwarding = () => {
   // ── Fetch Configurations on Mount ──────────────────────────────────────
   useEffect(() => {
     fetchConfigs();
-  }, []);
+    fetchLogs();
+
+    // Check for OAuth Code in URL
+    const params = new URLSearchParams(location.search);
+    const code = params.get('code');
+    if (code) {
+      handleOAuthCallback(code);
+    }
+  }, [location.search]);
+
+  const fetchLogs = async () => {
+    try {
+      const response = await botAPI.getEmailForwardingLogs();
+      if (response.data.success) {
+        setLogs(response.data.logs || []);
+        processChartData(response.data.logs || []);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const processChartData = (data) => {
+    const grouped = {};
+    data.forEach(log => {
+      const date = new Date(log.created_at || new Date()).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      if (!grouped[date]) grouped[date] = { date, success: 0, failed: 0 };
+      if (log.status === 'success') grouped[date].success += log.recipients_count || 1;
+      else grouped[date].failed += 1;
+    });
+    setChartData(Object.values(grouped).reverse());
+  };
+
+  const handleOAuthCallback = async (code) => {
+    try {
+      setLoading(true);
+      const res = await botAPI.exchangeOAuthCode(code);
+      if (res.data.success && res.data.tokens.refresh_token) {
+        setFormData(prev => ({ ...prev, password: res.data.tokens.refresh_token }));
+        setShowForm(true);
+        setResult({ type: 'success', message: 'Google Account successfully linked! Finish your configuration.' });
+      }
+      navigate('/email-forwarding', { replace: true });
+    } catch (err) {
+      setResult({ type: 'error', message: 'Failed to authenticate with Google.' });
+      navigate('/email-forwarding', { replace: true });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      const res = await botAPI.getOAuthURL();
+      if (res.data.success) {
+        window.location.href = res.data.url;
+      }
+    } catch (err) {
+      setResult({ type: 'error', message: 'Failed to connect to Google.' });
+    }
+  };
 
   const fetchConfigs = async () => {
     try {
@@ -223,42 +289,93 @@ const EmailForwarding = () => {
 
   // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen relative overflow-hidden bg-[#FEFDF7]">
+      {/* Background Decorators */}
+      <div className="absolute top-0 right-0 w-full h-[500px] bg-gradient-to-b from-yellow-300/20 to-transparent pointer-events-none animate-pulse-slow" />
+      <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary-300/20 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-40 -left-20 w-72 h-72 bg-yellow-400/20 rounded-full blur-[80px] pointer-events-none" />
+      
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 relative z-10">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Email Forwarding Bot</h1>
-          <p className="text-gray-600 mt-2">
-            Automatically forward emails with specific labels to your recipients. Powered by Supabase.
+          <h1 className="text-4xl font-bold text-gray-900 tracking-tight">Email Forwarding Hub</h1>
+          <p className="text-gray-600 mt-2 text-lg">
+            Monitor, securely authorize, and automate your inbox streams.
           </p>
         </div>
 
         {/* Result Banner */}
         {result && (
           <div
-            className={`mb-6 px-4 py-3 rounded-lg border ${
+            className={`mb-6 px-4 py-3 rounded-2xl border backdrop-blur-md shadow-sm ${
               result.type === 'success'
-                ? 'bg-green-50 border-green-200 text-green-700'
-                : 'bg-red-50 border-red-200 text-red-700'
+                ? 'bg-green-50/80 border-green-200 text-green-700'
+                : 'bg-red-50/80 border-red-200 text-red-700'
             }`}
           >
             <div className="flex items-center justify-between">
-              <span>{result.message}</span>
-              <button onClick={clearResult} className="ml-4 text-lg leading-none">&times;</button>
+              <span className="font-medium">{result.message}</span>
+              <button onClick={clearResult} className="ml-4 text-2xl leading-none opacity-60 hover:opacity-100 transition">&times;</button>
             </div>
           </div>
         )}
 
+        {/* Dashboard Analytics Card */}
+        <div className="bg-white/60 backdrop-blur-xl rounded-3xl border border-white/50 shadow-xl shadow-black/5 p-6 mb-8 mt-4 overflow-hidden relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 pointer-events-none" />
+          <div className="relative z-10">
+            <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <svg className="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg>
+              Activity Overview
+            </h2>
+            <div className="h-72 w-full">
+              {chartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorSuccess" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="colorFailed" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4}/>
+                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#00000015" />
+                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '16px', border: '1px solid rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)' }}
+                      itemStyle={{ fontWeight: 600 }}
+                    />
+                    <Area type="monotone" dataKey="success" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorSuccess)" name="Successful Forwards" />
+                    <Area type="monotone" dataKey="failed" stroke="#ef4444" strokeWidth={3} fillOpacity={1} fill="url(#colorFailed)" name="Failed Attempts" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex bg-gray-100/30 rounded-2xl items-center justify-center h-full text-gray-500 border border-dashed border-gray-300">
+                  <span className="flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Insufficient routing data to plot charts.
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* Configuration Management Card */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Email Forwarding Configurations</h2>
+        <div className="bg-white/60 backdrop-blur-xl rounded-3xl border border-white/50 shadow-xl shadow-black/5 p-6 mb-8 relative">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold text-gray-900">Configurations</h2>
             <button
               onClick={() => handleOpenForm()}
-              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition"
+              className="px-5 py-2.5 bg-gray-900 hover:bg-black text-white rounded-xl font-medium transition flex items-center gap-2 shadow-md hover:shadow-lg shadow-black/10"
               disabled={configsLoading}
             >
-              + Create Configuration
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>
+              Create New
             </button>
           </div>
 
@@ -402,7 +519,7 @@ const EmailForwarding = () => {
                   </div>
                 </div>
 
-                {/* Email & Password */}
+                 {/* Email & Password */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -414,23 +531,48 @@ const EmailForwarding = () => {
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       placeholder="your-email@gmail.com"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white transition"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Gmail, Outlook, Yahoo, or custom</p>
+                    <p className="text-xs text-gray-500 mt-1">Gmail or Custom Domain</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      App Password <span className="text-red-500">*</span>
+                      Authentication <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="password"
-                      required
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      placeholder="Your app-specific password"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Use app password, not account password</p>
+                    {formData.password && formData.password.startsWith('1//') ? (
+                       <div className="w-full px-4 py-3 bg-green-50 border border-green-200 text-green-700 rounded-xl flex items-center justify-between font-medium">
+                          <span className="flex items-center gap-2">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            Google Account Linked
+                          </span>
+                          <button type="button" onClick={() => setFormData({ ...formData, password: '' })} className="text-sm underline hover:text-green-800">Unlink</button>
+                       </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <input
+                          type="password"
+                          required
+                          value={formData.password}
+                          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                          placeholder="App Password..."
+                          className="flex-1 px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white transition"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleGoogleSignIn}
+                          className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 flex items-center gap-2 transition shadow-sm font-medium"
+                        >
+                          <svg className="w-5 h-5 drop-shadow-sm" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                          </svg>
+                          Connect Google
+                        </button>
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-500 mt-1">Provide an app password OR securely connect Google.</p>
                   </div>
                 </div>
 

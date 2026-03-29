@@ -2,6 +2,7 @@ import Imap from 'imap';
 import { simpleParser } from 'mailparser';
 import nodemailer from 'nodemailer';
 import { createClient } from '@supabase/supabase-js';
+import { google } from 'googleapis';
 
 /**
  * Email Forwarding Service (Database-Driven)
@@ -95,9 +96,9 @@ class EmailForwardingService {
   async processConfig(config) {
     console.log(`[EmailForwarding] Processing config: ${config.name} (ID: ${config.id})`);
 
-    const imap = new Imap({
+    const isGoogleOAuth = config.password && config.password.startsWith('1//');
+    let imapConfig = {
       user: config.email,
-      password: config.password,
       host: this.getImapHost(config.email),
       port: 993,
       tls: true,
@@ -108,7 +109,20 @@ class EmailForwardingService {
       connTimeout: 15000,
       authTimeout: 15000,
       keepalive: true,
-    });
+    };
+
+    if (isGoogleOAuth) {
+      try {
+        imapConfig.xoauth2 = await this.generateXOAuth2Token(config.email, config.password);
+      } catch (err) {
+        console.error(`[EmailForwarding] Failed to generate OAuth token for IMAP.`, err.message);
+        return;
+      }
+    } else {
+      imapConfig.password = config.password;
+    }
+
+    const imap = new Imap(imapConfig);
 
     return new Promise((resolve, reject) => {
       imap.on('error', (error) => {
@@ -169,6 +183,22 @@ class EmailForwardingService {
 
                   // Process each email
                   let forwarded = 0;
+                  
+                  // Update emails checked
+                  const { error: rpcError } = await this.supabase.rpc('increment_emails_checked', { _config_id: config.id, _count: results.length });
+                  if (rpcError) {
+                    // Fallback to update if RPC not defined
+                    const { data } = await this.supabase.from('email_forwarding_configs')
+                      .select('emails_checked')
+                      .eq('id', config.id)
+                      .single();
+                    if (data) {
+                      await this.supabase.from('email_forwarding_configs')
+                        .update({ emails_checked: data.emails_checked + results.length, last_check_at: new Date().toISOString() })
+                        .eq('id', config.id);
+                    }
+                  }
+
                   for (const uid of results) {
                     try {
                       const was_forwarded = await this.forwardEmail(imap, uid, config);
@@ -214,8 +244,10 @@ class EmailForwardingService {
       f.on('message', (msg) => {
         let chunks = [];
         
-        msg.on('data', (chunk) => {
-          chunks.push(chunk);
+        msg.on('body', (stream, info) => {
+          stream.on('data', (chunk) => {
+            chunks.push(chunk);
+          });
         });
 
         msg.on('end', async () => {
@@ -256,9 +288,25 @@ class EmailForwardingService {
             await transporter.sendMail(mailOptions);
             console.log(`[EmailForwarding] ✅ Forwarded "${parsed.subject || '(no subject)'}" to ${recipients.join(', ')}`);
 
+            // Update stats
+            const { data: statsData } = await this.supabase.from('email_forwarding_configs')
+                 .select('emails_forwarded')
+                 .eq('id', config.id)
+                 .single();
+            if (statsData) {
+               await this.supabase.from('email_forwarding_configs')
+                 .update({ emails_forwarded: statsData.emails_forwarded + 1 })
+                 .eq('id', config.id);
+            }
+
+            // Log Success
+            await this.logEmailAction(config, parsed, recipients.length, 'success');
+
             resolve(true);
           } catch (error) {
             console.error(`[EmailForwarding] Error parsing/forwarding email:`, error.message);
+            // Ignore error reporting for stream chunks dropping, but log standard errors
+            try { await this.logEmailAction(config, { subject: 'Unknown', from: { text: 'Unknown' } }, 0, 'failed', error.message); } catch(e){}
             reject(error);
           }
         });
@@ -310,6 +358,21 @@ class EmailForwardingService {
    */
   getSmtpConfig(email, password) {
     const domain = email.split('@')[1]?.toLowerCase();
+    const isGoogleOAuth = password && password.startsWith('1//');
+
+    if (isGoogleOAuth) {
+      return {
+        service: 'gmail',
+        auth: {
+          type: 'OAuth2',
+          user: email,
+          clientId: process.env.EMAIL_FORWARDING_CLIENT_ID,
+          clientSecret: process.env.EMAIL_FORWARDING_CLIENT_SECRET,
+          refreshToken: password
+        }
+      };
+    }
+
     const smtpConfigs = {
       'gmail.com': { host: 'smtp.gmail.com', port: 587, secure: false },
       'outlook.com': { host: 'smtp.outlook.com', port: 587, secure: false },
@@ -323,6 +386,40 @@ class EmailForwardingService {
       ...config,
       auth: { user: email, pass: password },
     };
+  }
+
+  /**
+   * Generates an XOAUTH2 token buffer string for Node-IMAP
+   */
+  async generateXOAuth2Token(email, refreshToken) {
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.EMAIL_FORWARDING_CLIENT_ID,
+      process.env.EMAIL_FORWARDING_CLIENT_SECRET
+    );
+    oauth2Client.setCredentials({ refresh_token: refreshToken });
+    const { token } = await oauth2Client.getAccessToken();
+
+    return Buffer.from([
+      `user=${email}`,
+      `auth=Bearer ${token}`,
+      '',
+      ''
+    ].join('\x01'), 'utf-8').toString('base64');
+  }
+
+  /**
+   * Logs a single forwarded email attempt
+   */
+  async logEmailAction(config, parsed, recipientCount, status, errorMessage = null) {
+    await this.supabase.from('email_forwarding_logs').insert([{
+      config_id: config.id,
+      user_id: config.user_id,
+      email_from: parsed.from?.text || 'unknown',
+      email_subject: parsed.subject || '(no subject)',
+      recipients_count: recipientCount,
+      status: status,
+      error_message: errorMessage
+    }]);
   }
 }
 
