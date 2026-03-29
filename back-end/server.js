@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth.js';
 import botRoutes from './routes/bot.js';
 import marketplaceRoutes from './routes/marketplace.js';
+import paymentRoutes from './routes/payment.js';
 import telegramBotFactory from './services/telegramBotFactory.js';
 import emailForwardingService from './services/EmailForwardingService.js';
 import './config/database.js'; // Initialize Supabase connection
@@ -64,6 +65,7 @@ app.use((req, res, next) => {
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/bot', botRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {

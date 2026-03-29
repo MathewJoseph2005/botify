@@ -36,5 +36,22 @@ const isAdmin = (req, res, next) => {
   next();
 };
 
+/**
+ * Middleware factory that requires specific role(s).
+ * Usage: auth.requireRole(2) for sellers, auth.requireRole(3) for buyers
+ * Role IDs: 1=Admin, 2=Seller, 3=Buyer
+ */
+const requireRole = (requiredRole) => {
+  return (req, res, next) => {
+    if (!req.user || req.user.role_id !== requiredRole) {
+      return res.status(403).json({
+        success: false,
+        message: `Access denied. Role ${requiredRole} required.`,
+      });
+    }
+    next();
+  };
+};
+
 export default verifyToken;
-export { isAdmin };
+export { isAdmin, requireRole };
