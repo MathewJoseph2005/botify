@@ -30,6 +30,12 @@ const EmailBot = () => {
   const [scheduledTime, setScheduledTime] = useState('');
   const [excelFile, setExcelFile] = useState(null);
   const [attachments, setAttachments] = useState([]);
+  
+  // ── Manual Entry State ───────────────────────────────────────────────────
+  const [campaignMode, setCampaignMode] = useState('file'); // 'file' or 'manual'
+  const [manualRecipients, setManualRecipients] = useState([
+    { name: '', email: '' }
+  ]);
 
   // ── Campaign History State ──────────────────────────────────────────────
   const [campaigns, setCampaigns] = useState([]);
@@ -207,9 +213,22 @@ const EmailBot = () => {
       return;
     }
 
-    if (!subject || !messageBody || !excelFile) {
-      setResult({ type: 'error', message: 'Subject, message, and recipient file are required.' });
+    if (!subject || !messageBody) {
+      setResult({ type: 'error', message: 'Subject and message body are required.' });
       return;
+    }
+
+    // Validate based on mode
+    if (campaignMode === 'file') {
+      if (!excelFile) {
+        setResult({ type: 'error', message: 'Recipient file is required.' });
+        return;
+      }
+    } else {
+      if (manualRecipients.length === 0 || manualRecipients.some(r => !r.email || !r.name)) {
+        setResult({ type: 'error', message: 'Please enter at least one recipient with name and email.' });
+        return;
+      }
     }
 
     try {
@@ -218,7 +237,14 @@ const EmailBot = () => {
       formData.append('subject', subject);
       formData.append('messageBody', messageBody);
       if (scheduledTime) formData.append('scheduledTime', scheduledTime);
-      formData.append('excelFile', excelFile);
+      
+      // Handle based on mode
+      if (campaignMode === 'file') {
+        formData.append('excelFile', excelFile);
+      } else {
+        formData.append('manualRecipients', JSON.stringify(manualRecipients));
+      }
+      
       attachments.forEach((file) => formData.append('attachment', file));
 
       const response = await botAPI.emailCampaign(selectedBotId, formData);
@@ -229,6 +255,7 @@ const EmailBot = () => {
         setScheduledTime('');
         setExcelFile(null);
         setAttachments([]);
+        setManualRecipients([{ name: '', email: '' }]);
         fetchCampaigns(); // refresh campaign history
       }
     } catch (err) {
@@ -413,61 +440,156 @@ const EmailBot = () => {
               </div>
             </div>
 
-            {/* Files Card */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Files</h2>
+            {/* Recipients Mode Tabs */}
+            <div className="bg-white rounded-lg shadow p-6 mb-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Recipients</h2>
+              
+              {/* Tabs */}
+              <div className="flex gap-2 mb-4 border-b border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setCampaignMode('file')}
+                  className={`px-4 py-2 font-medium border-b-2 transition ${
+                    campaignMode === 'file'
+                      ? 'border-primary-600 text-primary-600'
+                      : 'border-transparent text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  📁 Upload File
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCampaignMode('manual')}
+                  className={`px-4 py-2 font-medium border-b-2 transition ${
+                    campaignMode === 'manual'
+                      ? 'border-primary-600 text-primary-600'
+                      : 'border-transparent text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  ✏️ Manual Entry
+                </button>
+              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Recipient List <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="file"
-                    required
-                    accept=".xlsx,.xls,.csv"
-                    onChange={(e) => setExcelFile(e.target.files?.[0] || null)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Excel/CSV with "Email" column</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Attachments (Optional)
-                  </label>
-                  <label className="cursor-pointer bg-gray-50 border border-gray-300 hover:bg-gray-100 px-4 py-2 rounded-lg text-sm font-medium text-gray-700 transition inline-block mb-2">
-                    <span>Choose Files</span>
+              {/* File Upload Mode */}
+              {campaignMode === 'file' && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Recipient List <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="file"
-                      multiple
-                      onChange={(e) => {
-                        if (e.target.files.length) {
-                          setAttachments((prev) => [...prev, ...Array.from(e.target.files)]);
-                        }
-                      }}
-                      className="hidden"
+                      required
+                      accept=".xlsx,.xls,.csv"
+                      onChange={(e) => setExcelFile(e.target.files?.[0] || null)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
-                  </label>
-                  {attachments.length > 0 && (
-                    <div className="flex flex-col gap-1 mt-1">
-                      {attachments.map((file, idx) => (
-                        <div key={idx} className="flex justify-between items-center bg-gray-50 p-1 px-2 rounded border border-gray-200 text-xs text-gray-600">
-                          <span className="truncate">{file.name}</span>
-                          <button
-                            type="button"
-                            onClick={() => setAttachments((prev) => prev.filter((_, i) => i !== idx))}
-                            className="text-red-500 hover:text-red-700 font-bold ml-2"
-                          >
-                            &times;
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                    <p className="text-xs text-gray-500 mt-1">Excel/CSV with "Email" and "Name" columns</p>
+                    {excelFile && <p className="text-xs text-green-600 mt-1">✓ {excelFile.name}</p>}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Manual Entry Mode */}
+              {campaignMode === 'manual' && (
+                <div className="space-y-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-4">
+                    <p className="text-sm text-blue-700">Add recipients manually below. You can add as many as needed.</p>
+                  </div>
+                  
+                  <div className="space-y-3 max-h-80 overflow-y-auto">
+                    {manualRecipients.map((recipient, idx) => (
+                      <div key={idx} className="flex gap-2 items-end">
+                        <div className="flex-1">
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Name</label>
+                          <input
+                            type="text"
+                            value={recipient.name}
+                            onChange={(e) => {
+                              const updated = [...manualRecipients];
+                              updated[idx].name = e.target.value;
+                              setManualRecipients(updated);
+                            }}
+                            placeholder="John Doe"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                          <input
+                            type="email"
+                            value={recipient.email}
+                            onChange={(e) => {
+                              const updated = [...manualRecipients];
+                              updated[idx].email = e.target.value;
+                              setManualRecipients(updated);
+                            }}
+                            placeholder="john@example.com"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setManualRecipients(manualRecipients.filter((_, i) => i !== idx))}
+                          className="px-3 py-2 text-red-600 hover:text-red-700 font-semibold text-sm bg-red-50 hover:bg-red-100 rounded"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setManualRecipients([...manualRecipients, { name: '', email: '' }])}
+                    className="mt-3 px-4 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg text-sm font-medium"
+                  >
+                    + Add Recipient
+                  </button>
+                  
+                  <p className="text-xs text-gray-500 mt-2">
+                    Total Recipients: <span className="font-semibold">{manualRecipients.length}</span>
+                  </p>
+                </div>
+              )}
             </div>
+
+            {/* Attachments Card */}
+            <div className="bg-white rounded-lg shadow p-6 mb-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Attachments (Optional)</h2>
+
+              <label className="cursor-pointer bg-primary-50 border-2 border-dashed border-primary-300 hover:bg-primary-100 px-4 py-3 rounded-lg text-sm font-medium text-primary-700 transition inline-block mb-2">
+                <span>Choose Files</span>
+                <input
+                  type="file"
+                  multiple
+                  onChange={(e) => {
+                    if (e.target.files.length) {
+                      setAttachments((prev) => [...prev, ...Array.from(e.target.files)]);
+                    }
+                  }}
+                  className="hidden"
+                />
+              </label>
+              {attachments.length > 0 && (
+                <div className="flex flex-col gap-1 mt-3">
+                  {attachments.map((file, idx) => (
+                    <div key={idx} className="flex justify-between items-center bg-gray-50 p-2 px-3 rounded border border-gray-200 text-xs text-gray-600">
+                      <span className="truncate">{file.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => setAttachments((prev) => prev.filter((_, i) => i !== idx))}
+                        className="text-red-500 hover:text-red-700 font-bold ml-2"
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Files Card - OLD VERSION - TO BE REPLACED */}
 
             {/* Scheduling Card */}
             <div className="bg-white rounded-lg shadow p-6">

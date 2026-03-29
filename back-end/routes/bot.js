@@ -369,7 +369,7 @@ router.post('/test-connection/:botId', verifyToken, async (req, res) => {
 // ---------------------------------------------------------------------------
 router.post('/email-campaign/:botId', verifyToken, uploadFields, async (req, res) => {
   const { botId } = req.params;
-  const { subject, messageBody, scheduledTime } = req.body;
+  const { subject, messageBody, scheduledTime, manualRecipients } = req.body;
 
   // ---- Basic Validation ----
   if (!subject || !messageBody) {
@@ -379,12 +379,89 @@ router.post('/email-campaign/:botId', verifyToken, uploadFields, async (req, res
     });
   }
 
-  if (!req.files?.excelFile?.[0]) {
+  let emails = [];
+  let recipientNames = {};
+
+  // Check if manual recipients or file upload
+  if (manualRecipients) {
+    try {
+      const recipients = JSON.parse(manualRecipients);
+      if (!Array.isArray(recipients) || recipients.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'At least one recipient is required.',
+        });
+      }
+      
+      // Extract emails and store names
+      emails = recipients.map(r => r.email).filter(e => e);
+      recipients.forEach(r => {
+        recipientNames[r.email] = r.name;
+      });
+
+      if (emails.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'No valid email addresses provided.',
+        });
+      }
+    } catch (err) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid manual recipients format.',
+      });
+    }
+  } else if (req.files?.excelFile?.[0]) {
+    const excelPath = req.files.excelFile[0].path;
+    
+    // Parse emails from file
+    try {
+      const workbook = XLSX.readFile(excelPath);
+      const sheetName = workbook.SheetNames[0];
+      const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+      for (const row of rows) {
+        const emailKey = Object.keys(row).find((k) => k.toLowerCase() === 'email');
+        const nameKey = Object.keys(row).find((k) => k.toLowerCase() === 'name');
+        
+        if (emailKey && row[emailKey]) {
+          const email = String(row[emailKey]).trim();
+          const name = nameKey ? String(row[nameKey]).trim() : '';
+          if (email) {
+            emails.push(email);
+            if (name) recipientNames[email] = name;
+          }
+        }
+      }
+
+      cleanupFile(excelPath);
+    } catch (err) {
+      cleanupFile(req.files.excelFile[0].path);
+      const attachmentFiles = req.files.attachment || [];
+      attachmentFiles.forEach(file => cleanupFile(file.path));
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to parse the Excel file. Make sure it has an "Email" column.',
+      });
+    }
+
+    if (emails.length === 0) {
+      const attachmentFiles = req.files.attachment || [];
+      attachmentFiles.forEach(file => cleanupFile(file.path));
+      return res.status(400).json({
+        success: false,
+        message: 'No valid email addresses found in the uploaded file.',
+      });
+    }
+  } else {
     return res.status(400).json({
       success: false,
-      message: 'An Excel/CSV file with recipient emails is required.',
+      message: 'Either upload a file or provide manual recipients.',
     });
   }
+
+  // Remove duplicates
+  emails = [...new Set(emails)];
 
   try {
     // Fetch bot from database
@@ -411,30 +488,7 @@ router.post('/email-campaign/:botId', verifyToken, uploadFields, async (req, res
       });
     }
 
-    const excelPath = req.files.excelFile[0].path;
     const attachmentFiles = req.files.attachment || [];
-
-    // ---- Parse emails ----
-    let emails;
-    try {
-      emails = parseEmails(excelPath);
-    } catch (err) {
-      cleanupFile(excelPath);
-      attachmentFiles.forEach(file => cleanupFile(file.path));
-      return res.status(400).json({
-        success: false,
-        message: 'Failed to parse the Excel file. Make sure it has an "Email" column.',
-      });
-    }
-
-    if (emails.length === 0) {
-      cleanupFile(excelPath);
-      attachmentFiles.forEach(file => cleanupFile(file.path));
-      return res.status(400).json({
-        success: false,
-        message: 'No valid email addresses found in the uploaded file.',
-      });
-    }
 
     // ---- Build the mail sending function ----
     const sendCampaign = async (campaignId) => {
@@ -848,7 +902,7 @@ router.post('/whatsapp-campaign', verifyToken, (req, res, next) => {
     next();
   });
 }, async (req, res) => {
-  const { messageBody, campaignName } = req.body;
+  const { messageBody, campaignName, manualRecipients } = req.body;
   const attachmentFiles = req.files?.attachment || [];
 
   // ── Validation ────────────────────────────────────────────────────────
@@ -858,30 +912,40 @@ router.post('/whatsapp-campaign', verifyToken, (req, res, next) => {
     return res.status(400).json({ success: false, message: 'messageBody is required.' });
   }
 
-  if (!req.files || !req.files.excelFile || !req.files.excelFile[0]) {
-    attachmentFiles.forEach(file => cleanupFile(file.path));
-    return res.status(400).json({
-      success: false,
-      message: 'An Excel/CSV file with recipient data is required.',
-    });
-  }
+  let recipients = [];
 
-  const excelPath = req.files.excelFile[0].path;
-  const attachmentPaths = attachmentFiles.map(f => f.path);
+  // Check if manual recipients or file upload
+  if (manualRecipients) {
+    try {
+      const parsedRecipients = JSON.parse(manualRecipients);
+      if (!Array.isArray(parsedRecipients) || parsedRecipients.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'At least one recipient is required.',
+        });
+      }
+      
+      recipients = parsedRecipients.map(r => ({
+        phone: r.phone,
+        name: r.name || ''
+      })).filter(r => r.phone);
 
-  if (!whatsappController.isReady) {
-    cleanupFile(excelPath);
-    attachmentFiles.forEach(file => cleanupFile(file.path));
-    return res.status(400).json({
-      success: false,
-      message: 'WhatsApp client is not connected. Please scan the QR code first.',
-    });
-  }
+      if (recipients.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'No valid phone numbers provided.',
+        });
+      }
+    } catch (err) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid manual recipients format.',
+      });
+    }
+  } else if (req.files?.excelFile?.[0]) {
+    const excelPath = req.files.excelFile[0].path;
 
-
-  try {
     // ── Parse recipients ──────────────────────────────────────────────
-    let recipients;
     try {
       recipients = parseWhatsAppRecipients(excelPath);
     } catch (parseErr) {
@@ -893,14 +957,39 @@ router.post('/whatsapp-campaign', verifyToken, (req, res, next) => {
       });
     }
 
-    if (recipients.length === 0) {
-      cleanupFile(excelPath);
-      attachmentFiles.forEach(file => cleanupFile(file.path));
-      return res.status(400).json({
-        success: false,
-        message: 'No valid recipients found. Add phone numbers with 8-15 digits (with country code) in a phone/whatsapp column or first column.',
-      });
-    }
+    cleanupFile(excelPath);
+  } else {
+    attachmentFiles.forEach(file => cleanupFile(file.path));
+    return res.status(400).json({
+      success: false,
+      message: 'Either upload a file or provide manual recipients.',
+    });
+  }
+
+  if (recipients.length === 0) {
+    attachmentFiles.forEach(file => cleanupFile(file.path));
+    return res.status(400).json({
+      success: false,
+      message: 'No valid recipients found. Add phone numbers with country code.',
+    });
+  }
+
+  if (!whatsappController.isReady) {
+    attachmentFiles.forEach(file => cleanupFile(file.path));
+    return res.status(400).json({
+      success: false,
+      message: 'WhatsApp client is not connected. Please scan the QR code first.',
+    });
+  }
+
+  try {
+    // Remove duplicates based on phone
+    const phoneSet = new Set();
+    recipients = recipients.filter(r => {
+      if (phoneSet.has(r.phone)) return false;
+      phoneSet.add(r.phone);
+      return true;
+    });
 
     // ── Create campaign record ────────────────────────────────────────
     const { data: campaign, error: campaignErr } = await supabase
@@ -918,7 +1007,6 @@ router.post('/whatsapp-campaign', verifyToken, (req, res, next) => {
 
     if (campaignErr) {
       console.error('Failed to create WhatsApp campaign record:', campaignErr);
-      cleanupFile(excelPath);
       attachmentFiles.forEach(file => cleanupFile(file.path));
       return res.status(500).json({ success: false, message: 'Failed to create campaign record.' });
     }
@@ -934,6 +1022,7 @@ router.post('/whatsapp-campaign', verifyToken, (req, res, next) => {
     // ── Background send loop ──────────────────────────────────────────
     let sent = 0;
     let failed = 0;
+    const attachmentPaths = attachmentFiles.map(f => f.path);
 
     for (const recipient of recipients) {
       try {
@@ -968,12 +1057,10 @@ router.post('/whatsapp-campaign', verifyToken, (req, res, next) => {
       })
       .eq('id', campaign.id);
 
-    cleanupFile(excelPath);
     attachmentFiles.forEach(file => cleanupFile(file.path));
     console.log(`[WA Campaign] Completed – sent: ${sent}, failed: ${failed}`);
   } catch (err) {
     console.error('WhatsApp campaign error:', err);
-    cleanupFile(excelPath);
     attachmentFiles.forEach(file => cleanupFile(file.path));
     // Campaign may already have been recorded – try to mark it failed
     // (response already sent, so we can't respond here)
