@@ -73,6 +73,12 @@ const WhatsAppCampaign = () => {
   const [excelFile, setExcelFile] = useState(null);
   const [attachments, setAttachments] = useState([]);
   const [dragOver, setDragOver] = useState(false);
+  
+  // ── Manual Entry State ───────────────────────────────────────────────────
+  const [campaignMode, setCampaignMode] = useState('file'); // 'file' or 'manual'
+  const [manualRecipients, setManualRecipients] = useState([
+    { name: '', phone: '' }
+  ]);
 
   // ── Campaign Progress ───────────────────────────────────────────────────
   const [activeCampaignId, setActiveCampaignId] = useState(null);
@@ -265,18 +271,33 @@ const WhatsAppCampaign = () => {
     if (!messageBody.trim()) {
       return setResult({ type: 'error', message: 'Message body is required.' });
     }
-    if (!excelFile) {
-      return setResult({ type: 'error', message: 'Please upload an Excel/CSV file with recipients.' });
+    
+    // Validate based on mode
+    if (campaignMode === 'file') {
+      if (!excelFile) {
+        return setResult({ type: 'error', message: 'Please upload an Excel/CSV file with recipients.' });
+      }
+    } else {
+      if (manualRecipients.length === 0 || manualRecipients.some(r => !r.phone || !r.name)) {
+        return setResult({ type: 'error', message: 'Please enter at least one recipient with name and phone number.' });
+      }
     }
+    
     if (!waReady) {
       return setResult({ type: 'error', message: 'WhatsApp is not connected. Scan the QR code first.' });
     }
 
     const formData = new FormData();
-    formData.append('excelFile', excelFile);
     attachments.forEach((file) => formData.append('attachment', file));
     formData.append('messageBody', messageBody);
     formData.append('campaignName', campaignName || 'Untitled Campaign');
+    
+    // Handle based on mode
+    if (campaignMode === 'file') {
+      formData.append('excelFile', excelFile);
+    } else {
+      formData.append('manualRecipients', JSON.stringify(manualRecipients));
+    }
 
     try {
       setSending(true);
@@ -295,6 +316,7 @@ const WhatsAppCampaign = () => {
         setMessageBody('');
         setExcelFile(null);
         setAttachments([]);
+        setManualRecipients([{ name: '', phone: '' }]);
       }
     } catch (err) {
       setSending(false);
@@ -521,56 +543,147 @@ const WhatsAppCampaign = () => {
             </div>
           </div>
 
-          {/* File Upload – drag-and-drop */}
+          {/* File Upload – drag-and-drop OR Manual Entry */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Recipients File <span className="text-gray-400">(.xlsx, .xls, .csv)</span>
-            </label>
-            <div
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={handleFileDrop}
-              className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition ${
-                dragOver
-                  ? 'border-green-500 bg-green-50'
-                  : excelFile
-                  ? 'border-green-400 bg-green-50'
-                  : 'border-gray-300 hover:border-gray-400 bg-gray-50'
-              }`}
-              onClick={() => document.getElementById('wa-file-input').click()}
-            >
-              {excelFile ? (
-                <div>
-                  <p className="text-green-700 font-medium">{excelFile.name}</p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {(excelFile.size / 1024).toFixed(1)} KB &middot;{' '}
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); setExcelFile(null); }}
-                      className="text-red-500 hover:underline"
-                    >
-                      Remove
-                    </button>
-                  </p>
-                </div>
-              ) : (
-                <div>
-                  <svg className="mx-auto h-10 w-10 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                  </svg>
-                  <p className="text-gray-600 font-medium">Drag &amp; drop your file here</p>
-                  <p className="text-sm text-gray-400 mt-1">or click to browse</p>
-                  <p className="text-xs text-gray-400 mt-2">Excel must contain <strong>name</strong> and <strong>whatsapp_number</strong> columns</p>
-                </div>
-              )}
-              <input
-                id="wa-file-input"
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
+            <label className="block text-sm font-medium text-gray-700 mb-3">Recipients</label>
+            
+            {/* Tabs */}
+            <div className="flex gap-2 mb-4 border-b border-gray-200">
+              <button
+                type="button"
+                onClick={() => setCampaignMode('file')}
+                className={`px-4 py-2 font-medium border-b-2 transition ${
+                  campaignMode === 'file'
+                    ? 'border-green-600 text-green-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                📁 Upload File
+              </button>
+              <button
+                type="button"
+                onClick={() => setCampaignMode('manual')}
+                className={`px-4 py-2 font-medium border-b-2 transition ${
+                  campaignMode === 'manual'
+                    ? 'border-green-600 text-green-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                ✏️ Manual Entry
+              </button>
             </div>
+
+            {/* File Upload Mode */}
+            {campaignMode === 'file' && (
+              <div
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={handleFileDrop}
+                className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition ${
+                  dragOver
+                    ? 'border-green-500 bg-green-50'
+                    : excelFile
+                    ? 'border-green-400 bg-green-50'
+                    : 'border-gray-300 hover:border-gray-400 bg-gray-50'
+                }`}
+                onClick={() => document.getElementById('wa-file-input').click()}
+              >
+                {excelFile ? (
+                  <div>
+                    <p className="text-green-700 font-medium">{excelFile.name}</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {(excelFile.size / 1024).toFixed(1)} KB &middot;{' '}
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setExcelFile(null); }}
+                        className="text-red-500 hover:underline"
+                      >
+                        Remove
+                      </button>
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <svg className="mx-auto h-10 w-10 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                    </svg>
+                    <p className="text-gray-600 font-medium">Drag &amp; drop your file here</p>
+                    <p className="text-sm text-gray-400 mt-1">or click to browse</p>
+                    <p className="text-xs text-gray-400 mt-2">Excel must contain <strong>name</strong> and <strong>whatsapp_number</strong> columns</p>
+                  </div>
+                )}
+                <input
+                  id="wa-file-input"
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+              </div>
+            )}
+
+            {/* Manual Entry Mode */}
+            {campaignMode === 'manual' && (
+              <div className="space-y-4">
+                <div className="bg-green-50 border border-green-200 rounded p-3">
+                  <p className="text-sm text-green-700">Add recipients manually below. Include country code in phone numbers (e.g., +1234567890).</p>
+                </div>
+                
+                <div className="space-y-3 max-h-80 overflow-y-auto">
+                  {manualRecipients.map((recipient, idx) => (
+                    <div key={idx} className="flex gap-2 items-end">
+                      <div className="flex-1">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Name</label>
+                        <input
+                          type="text"
+                          value={recipient.name}
+                          onChange={(e) => {
+                            const updated = [...manualRecipients];
+                            updated[idx].name = e.target.value;
+                            setManualRecipients(updated);
+                          }}
+                          placeholder="John Doe"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
+                        <input
+                          type="tel"
+                          value={recipient.phone}
+                          onChange={(e) => {
+                            const updated = [...manualRecipients];
+                            updated[idx].phone = e.target.value;
+                            setManualRecipients(updated);
+                          }}
+                          placeholder="+1234567890"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setManualRecipients(manualRecipients.filter((_, i) => i !== idx))}
+                        className="px-3 py-2 text-red-600 hover:text-red-700 font-semibold text-sm bg-red-50 hover:bg-red-100 rounded"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setManualRecipients([...manualRecipients, { name: '', phone: '' }])}
+                  className="mt-3 px-4 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg text-sm font-medium"
+                >
+                  + Add Recipient
+                </button>
+                
+                <p className="text-xs text-gray-500 mt-2">
+                  Total Recipients: <span className="font-semibold">{manualRecipients.length}</span>
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Submit */}
