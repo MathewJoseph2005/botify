@@ -21,20 +21,32 @@ export default function SellerWalletDashboard() {
 
   const fetchWalletData = async () => {
     try {
-      const [walletRes, accountsRes, payoutsRes] = await Promise.all([
-        paymentsAPI.getSellerWallet(),
-        paymentsAPI.getBankAccounts(),
-        paymentsAPI.getPayoutRequests(),
-      ]);
-
+      // Fetch wallet data
+      const walletRes = await paymentsAPI.getSellerWallet();
       if (walletRes.data.success) {
         setWallet(walletRes.data.data);
       }
-      if (accountsRes.data.success) {
-        setBankAccounts(accountsRes.data.data);
+
+      // Fetch bank accounts (non-blocking)
+      try {
+        const accountsRes = await paymentsAPI.getBankAccounts();
+        if (accountsRes.data.success) {
+          setBankAccounts(accountsRes.data.data);
+        }
+      } catch (err) {
+        console.error('Error fetching bank accounts:', err);
+        setBankAccounts([]);
       }
-      if (payoutsRes.data.success) {
-        setPayoutRequests(payoutsRes.data.data.requests || []);
+
+      // Fetch payouts (non-blocking)
+      try {
+        const payoutsRes = await paymentsAPI.getPayoutRequests();
+        if (payoutsRes.data.success) {
+          setPayoutRequests(payoutsRes.data.data.requests || []);
+        }
+      } catch (err) {
+        console.error('Error fetching payouts:', err);
+        setPayoutRequests([]);
       }
 
       setError('');

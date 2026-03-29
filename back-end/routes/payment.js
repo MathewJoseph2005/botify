@@ -36,7 +36,7 @@ function calculateFees(amount) {
 router.post('/create-checkout-session', verifyToken, requireRole(3), async (req, res) => {
   try {
     const { marketplace_bot_id, quantity = 1 } = req.body;
-    const buyer_id = req.user.id;
+    const buyer_id = req.user.user_id;
 
     if (!marketplace_bot_id) {
       return res.status(400).json({
@@ -108,7 +108,7 @@ router.post('/create-checkout-session', verifyToken, requireRole(3), async (req,
 router.post('/confirm-demo-payment', verifyToken, requireRole(3), async (req, res) => {
   try {
     const { marketplace_bot_id, cardNumber, expiryDate, cvc } = req.body;
-    const buyer_id = req.user.id;
+    const buyer_id = req.user.user_id;
 
     if (!marketplace_bot_id || !cardNumber || !expiryDate || !cvc) {
       return res.status(400).json({
@@ -289,7 +289,7 @@ router.post('/confirm-demo-payment', verifyToken, requireRole(3), async (req, re
  */
 router.get('/seller/wallet', verifyToken, requireRole(2), async (req, res) => {
   try {
-    const seller_id = req.user.id;
+    const seller_id = req.user.user_id;
 
     // Fetch wallet
     const { data: wallet, error: walletError } = await supabase
@@ -356,7 +356,7 @@ router.get('/seller/wallet', verifyToken, requireRole(2), async (req, res) => {
  */
 router.get('/seller/wallet/transactions', verifyToken, requireRole(2), async (req, res) => {
   try {
-    const seller_id = req.user.id;
+    const seller_id = req.user.user_id;
     const page = parseInt(req.query.page || '0');
     const limit = parseInt(req.query.limit || '20');
     const offset = page * limit;
@@ -416,7 +416,7 @@ router.get('/seller/wallet/transactions', verifyToken, requireRole(2), async (re
  */
 router.post('/seller/bank-accounts', verifyToken, requireRole(2), async (req, res) => {
   try {
-    const seller_id = req.user.id;
+    const seller_id = req.user.user_id;
     const {
       account_holder_name,
       bank_country,
@@ -463,8 +463,6 @@ router.post('/seller/bank-accounts', verifyToken, requireRole(2), async (req, re
         iban,
         account_type,
         is_primary,
-        is_verified: true, // Auto-verify in demo mode
-        stripe_verification_status: 'verified',
       })
       .select()
       .single();
@@ -497,28 +495,32 @@ router.post('/seller/bank-accounts', verifyToken, requireRole(2), async (req, re
  */
 router.get('/seller/bank-accounts', verifyToken, requireRole(2), async (req, res) => {
   try {
-    const seller_id = req.user.id;
+    const seller_id = req.user.user_id;
+
+    console.log('[PAYMENT] Fetching bank accounts for seller:', seller_id);
 
     const { data: accounts, error: fetchError } = await supabase
       .from('seller_bank_accounts')
       .select('*')
-      .eq('seller_id', seller_id)
-      .order('is_primary', { ascending: false })
-      .order('created_at', { ascending: false });
+      .eq('seller_id', seller_id);
 
     if (fetchError) {
+      console.error('[PAYMENT] Supabase fetch error:', fetchError);
       return res.status(500).json({
         success: false,
         error: 'Failed to fetch bank accounts',
+        details: fetchError.message,
       });
     }
+
+    console.log('[PAYMENT] Found', accounts?.length || 0, 'bank accounts');
 
     return res.json({
       success: true,
       data: accounts || [],
     });
   } catch (error) {
-    console.error('Bank accounts fetch error:', error);
+    console.error('[PAYMENT] Bank accounts fetch error:', error);
     return res.status(500).json({
       success: false,
       error: error.message,
@@ -532,7 +534,7 @@ router.get('/seller/bank-accounts', verifyToken, requireRole(2), async (req, res
  */
 router.delete('/seller/bank-accounts/:account_id', verifyToken, requireRole(2), async (req, res) => {
   try {
-    const seller_id = req.user.id;
+    const seller_id = req.user.user_id;
     const { account_id } = req.params;
 
     // Verify account belongs to seller
@@ -598,7 +600,7 @@ router.delete('/seller/bank-accounts/:account_id', verifyToken, requireRole(2), 
  */
 router.post('/seller/payout-request', verifyToken, requireRole(2), async (req, res) => {
   try {
-    const seller_id = req.user.id;
+    const seller_id = req.user.user_id;
     const { bank_account_id, amount, currency = 'USD' } = req.body;
 
     // Validate inputs
@@ -654,14 +656,14 @@ router.post('/seller/payout-request', verifyToken, requireRole(2), async (req, r
 
     // Create payout request
     const { data: payoutRequest, error: payoutError } = await supabase
-      .from('payout_requests')
+      .from('seller_payout_requests')
       .insert({
         seller_id,
         bank_account_id,
         amount,
         currency,
         status: 'pending',
-        requested_at: new Date().toISOString(),
+        net_amount: amount, // Same as amount for now (no processing fee in demo)
       })
       .select()
       .single();
@@ -703,10 +705,10 @@ router.post('/seller/payout-request', verifyToken, requireRole(2), async (req, r
       try {
         // Update payout status to completed
         await supabase
-          .from('payout_requests')
+          .from('seller_payout_requests')
           .update({
             status: 'completed',
-            completed_at: new Date().toISOString(),
+            processed_date: new Date().toISOString(),
           })
           .eq('id', payoutRequest.id);
 
@@ -736,14 +738,14 @@ router.post('/seller/payout-request', verifyToken, requireRole(2), async (req, r
  */
 router.get('/seller/payout-requests', verifyToken, requireRole(2), async (req, res) => {
   try {
-    const seller_id = req.user.id;
+    const seller_id = req.user.user_id;
     const page = parseInt(req.query.page || '0');
     const limit = parseInt(req.query.limit || '20');
     const offset = page * limit;
 
     // Count total requests
     const { count, error: countError } = await supabase
-      .from('payout_requests')
+      .from('seller_payout_requests')
       .select('*', { count: 'exact', head: true })
       .eq('seller_id', seller_id);
 
@@ -756,7 +758,7 @@ router.get('/seller/payout-requests', verifyToken, requireRole(2), async (req, r
 
     // Fetch requests with bank account details
     const { data: requests, error: fetchError } = await supabase
-      .from('payout_requests')
+      .from('seller_payout_requests')
       .select(`
         *,
         seller_bank_accounts (
@@ -767,7 +769,7 @@ router.get('/seller/payout-requests', verifyToken, requireRole(2), async (req, r
         )
       `)
       .eq('seller_id', seller_id)
-      .order('requested_at', { ascending: false })
+      .order('request_date', { ascending: false })
       .range(offset, offset + limit - 1);
 
     if (fetchError) {

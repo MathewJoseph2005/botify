@@ -29,6 +29,7 @@ const Marketplace = () => {
   const [purchasing, setPurchasing] = useState(null);
   const [selectedBot, setSelectedBot] = useState(null);
   const [checkoutModal, setCheckoutModal] = useState({ open: false, bot: null });
+  const [purchasedBotIds, setPurchasedBotIds] = useState([]); // Track purchased bots
 
   // Filters
   const [platform, setPlatform] = useState('');
@@ -37,7 +38,22 @@ const Marketplace = () => {
 
   useEffect(() => {
     fetchListings();
-  }, [platform, sort]);
+    if (isAuthenticated && user?.role_id === 3) {
+      fetchUserPurchases();
+    }
+  }, [platform, sort, isAuthenticated]);
+
+  const fetchUserPurchases = async () => {
+    try {
+      const res = await marketplaceAPI.getMyPurchases();
+      if (res.data.success) {
+        const botIds = res.data.purchases?.map(p => p.marketplace_bot_id) || [];
+        setPurchasedBotIds(botIds);
+      }
+    } catch (err) {
+      console.error('Error fetching purchases:', err);
+    }
+  };
 
   const fetchListings = async () => {
     try {
@@ -264,13 +280,22 @@ const Marketplace = () => {
                         >
                           Details
                         </button>
-                        <button
-                          onClick={() => handlePurchase(bot)}
-                          disabled={checkoutModal.bot?.id === bot.id}
-                          className="px-4 py-2 text-sm bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition font-medium disabled:opacity-50"
-                        >
-                          {checkoutModal.bot?.id === bot.id ? 'Opening...' : 'Buy Now'}
-                        </button>
+                        {purchasedBotIds.includes(bot.id) ? (
+                          <button
+                            disabled
+                            className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg transition font-medium cursor-not-allowed flex items-center gap-1"
+                          >
+                            ✓ Purchased
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handlePurchase(bot)}
+                            disabled={checkoutModal.bot?.id === bot.id}
+                            className="px-4 py-2 text-sm bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition font-medium disabled:opacity-50"
+                          >
+                            {checkoutModal.bot?.id === bot.id ? 'Opening...' : 'Buy Now'}
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -343,13 +368,22 @@ const Marketplace = () => {
                   <span className="text-3xl font-bold text-gray-900">
                     {parseFloat(selectedBot.price) === 0 ? 'Free' : `$${parseFloat(selectedBot.price).toFixed(2)}`}
                   </span>
-                  <button
-                    onClick={() => handlePurchase(selectedBot)}
-                    disabled={checkoutModal.bot?.id === selectedBot.id}
-                    className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition font-medium disabled:opacity-50"
-                  >
-                    {checkoutModal.bot?.id === selectedBot.id ? 'Opening Checkout...' : 'Purchase Bot'}
-                  </button>
+                  {purchasedBotIds.includes(selectedBot.id) ? (
+                    <button
+                      disabled
+                      className="px-6 py-3 bg-green-600 text-white rounded-lg transition font-medium cursor-not-allowed flex items-center gap-2"
+                    >
+                      ✓ Already Purchased
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handlePurchase(selectedBot)}
+                      disabled={checkoutModal.bot?.id === selectedBot.id}
+                      className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition font-medium disabled:opacity-50"
+                    >
+                      {checkoutModal.bot?.id === selectedBot.id ? 'Opening Checkout...' : 'Purchase Bot'}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
