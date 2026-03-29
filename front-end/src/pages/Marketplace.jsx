@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { marketplaceAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import DemoCheckoutModal from '../components/DemoCheckoutModal';
 
 const PLATFORMS = [
   { value: '', label: 'All Platforms', icon: '🌐' },
@@ -27,6 +28,7 @@ const Marketplace = () => {
   const [success, setSuccess] = useState('');
   const [purchasing, setPurchasing] = useState(null);
   const [selectedBot, setSelectedBot] = useState(null);
+  const [checkoutModal, setCheckoutModal] = useState({ open: false, bot: null });
 
   // Filters
   const [platform, setPlatform] = useState('');
@@ -62,7 +64,7 @@ const Marketplace = () => {
     fetchListings();
   };
 
-  const handlePurchase = async (botId) => {
+  const handlePurchase = (bot) => {
     if (!isAuthenticated) {
       setError('Please log in to purchase bots.');
       return;
@@ -71,22 +73,17 @@ const Marketplace = () => {
       setError('Only buyers can purchase bots. Please sign up as a buyer.');
       return;
     }
-    if (!confirm('Are you sure you want to purchase this bot?')) return;
+    
+    // Open checkout modal
+    setCheckoutModal({ open: true, bot });
+    setError('');
+  };
 
-    try {
-      setPurchasing(botId);
-      setError('');
-      const res = await marketplaceAPI.purchase(botId);
-      if (res.data.success) {
-        setSuccess('Bot purchased successfully! Check your Buyer Dashboard.');
-        fetchListings();
-        setSelectedBot(null);
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Purchase failed.');
-    } finally {
-      setPurchasing(null);
-    }
+  const handleCheckoutSuccess = () => {
+    setCheckoutModal({ open: false, bot: null });
+    setSuccess('🎉 Purchase completed successfully!');
+    fetchListings();
+    setTimeout(() => setSuccess(''), 5000);
   };
 
   const getPlatformInfo = (val) => PLATFORMS.find((p) => p.value === val) || { label: val, icon: '🤖' };
@@ -268,11 +265,11 @@ const Marketplace = () => {
                           Details
                         </button>
                         <button
-                          onClick={() => handlePurchase(bot.id)}
-                          disabled={purchasing === bot.id}
+                          onClick={() => handlePurchase(bot)}
+                          disabled={checkoutModal.bot?.id === bot.id}
                           className="px-4 py-2 text-sm bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition font-medium disabled:opacity-50"
                         >
-                          {purchasing === bot.id ? 'Buying...' : 'Buy Now'}
+                          {checkoutModal.bot?.id === bot.id ? 'Opening...' : 'Buy Now'}
                         </button>
                       </div>
                     </div>
@@ -347,16 +344,26 @@ const Marketplace = () => {
                     {parseFloat(selectedBot.price) === 0 ? 'Free' : `$${parseFloat(selectedBot.price).toFixed(2)}`}
                   </span>
                   <button
-                    onClick={() => handlePurchase(selectedBot.id)}
-                    disabled={purchasing === selectedBot.id}
+                    onClick={() => handlePurchase(selectedBot)}
+                    disabled={checkoutModal.bot?.id === selectedBot.id}
                     className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition font-medium disabled:opacity-50"
                   >
-                    {purchasing === selectedBot.id ? 'Processing...' : 'Purchase Bot'}
+                    {checkoutModal.bot?.id === selectedBot.id ? 'Opening Checkout...' : 'Purchase Bot'}
                   </button>
                 </div>
               </div>
             </div>
           </div>
+        )}
+
+        {/* Demo Checkout Modal */}
+        {checkoutModal.bot && (
+          <DemoCheckoutModal
+            bot={checkoutModal.bot}
+            isOpen={checkoutModal.open}
+            onClose={() => setCheckoutModal({ open: false, bot: null })}
+            onSuccess={handleCheckoutSuccess}
+          />
         )}
       </div>
     </div>

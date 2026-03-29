@@ -97,6 +97,19 @@ export const marketplaceAPI = {
   getMyPurchases: () => api.get('/marketplace/my-purchases'),
 };
 
+// Payments API
+export const paymentsAPI = {
+  createCheckoutSession: (data) => api.post('/payments/create-checkout-session', data),
+  confirmDemoPayment: (data) => api.post('/payments/confirm-demo-payment', data),
+  getSellerWallet: () => api.get('/payments/seller/wallet'),
+  getWalletTransactions: (params) => api.get('/payments/seller/wallet/transactions', { params }),
+  getBankAccounts: () => api.get('/payments/seller/bank-accounts'),
+  addBankAccount: (data) => api.post('/payments/seller/bank-accounts', data),
+  deleteBankAccount: (accountId) => api.delete(`/payments/seller/bank-accounts/${accountId}`),
+  createPayoutRequest: (data) => api.post('/payments/seller/payout-request', data),
+  getPayoutRequests: (params) => api.get('/payments/seller/payout-requests', { params }),
+};
+
 // Auth helper functions
 export const authHelpers = {
   setToken: (token) => localStorage.setItem('token', token),

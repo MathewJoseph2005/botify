@@ -4,6 +4,7 @@ import { botAPI, marketplaceAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import BotTable from '../components/BotTable';
 import ConfirmModal from '../components/ConfirmModal';
+import SellerWalletDashboard from '../components/SellerWalletDashboard';
 
 const SellerDashboard = () => {
   const { user } = useAuth();
@@ -11,6 +12,7 @@ const SellerDashboard = () => {
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState('bots'); // bots or wallet
 
   const [deleteModal, setDeleteModal] = useState({ open: false, botId: null });
 
@@ -82,7 +84,41 @@ const SellerDashboard = () => {
           </div>
         )}
 
+        {/* Tabs */}
+        <div className="flex gap-4 mb-6 border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab('bots')}
+            className={`px-4 py-3 font-medium border-b-2 transition ${
+              activeTab === 'bots'
+                ? 'border-primary-600 text-primary-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            📝 My Bots
+          </button>
+          <button
+            onClick={() => setActiveTab('wallet')}
+            className={`px-4 py-3 font-medium border-b-2 transition ${
+              activeTab === 'wallet'
+                ? 'border-primary-600 text-primary-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            💰 Wallet & Earnings
+          </button>
+        </div>
+
+        {error && (
+          <div className="mb-6 px-4 py-3 rounded-lg border bg-red-50 border-red-200 text-red-700">
+            <div className="flex items-center justify-between">
+              <span>{error}</span>
+              <button onClick={() => setError('')} className="ml-4 text-lg leading-none">&times;</button>
+            </div>
+          </div>
+        )}
+
         {/* Stats Grid */}
+        {activeTab === 'bots' && (
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
@@ -154,8 +190,10 @@ const SellerDashboard = () => {
             </div>
           </div>
         </div>
+        )}
 
         {/* Quick Actions */}
+        {activeTab === 'bots' && (
         <div className="bg-white rounded-lg shadow mb-8">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900">Quick Actions</h2>
@@ -187,8 +225,10 @@ const SellerDashboard = () => {
             </button>
           </div>
         </div>
+        )}
 
         {/* My Bots */}
+        {activeTab === 'bots' && (
         <div className="bg-white rounded-lg shadow">
           <div className="p-6 border-b border-gray-200">
             <div className="flex justify-between items-center">
@@ -225,6 +265,12 @@ const SellerDashboard = () => {
             />
           )}
         </div>
+        )}
+
+        {/* Wallet Dashboard Tab */}
+        {activeTab === 'wallet' && (
+          <SellerWalletDashboard />
+        )}
       </div>
 
       {/* Confirm Delete Modal */}

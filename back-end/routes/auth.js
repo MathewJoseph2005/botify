@@ -103,6 +103,26 @@ router.post('/signup', async (req, res) => {
       throw insertError;
     }
 
+    // Create seller wallet if user is a seller (role_id === 2)
+    if (role_id === 2) {
+      const { error: walletError } = await supabase
+        .from('seller_wallets')
+        .insert([
+          {
+            seller_id: newUser.user_id,
+            balance: 0,
+            total_earned: 0,
+            total_withdrawn: 0,
+            created_at: new Date().toISOString()
+          }
+        ]);
+
+      if (walletError) {
+        console.error('Failed to create seller wallet:', walletError);
+        // Don't fail the signup, just log the error
+      }
+    }
+
     // Generate JWT
     const token = jwt.sign(
       { 
