@@ -1,0 +1,93 @@
+On branch main
+Your branch and 'origin/main' have diverged,
+and have 1 and 10 different commits each, respectively.
+  (use "git pull" if you want to integrate the remote branch with yours)
+
+You have unmerged paths.
+  (fix conflicts and run "git commit")
+  (use "git merge --abort" to abort the merge)
+
+Changes to be committed:
+	new file:   CODE_REVIEW_REPORT.md
+	new file:   DEMO_PAYMENT_GUIDE.md
+	new file:   DEMO_PAYMENT_QUICKSTART.md
+	new file:   EMAIL_FORWARDING_IMPLEMENTATION.md
+	new file:   EMAIL_FORWARDING_SEPARATE_SUPABASE.md
+	new file:   EMAIL_FORWARDING_SUMMARY.md
+	new file:   MANUAL_ENTRY_GUIDE.md
+	new file:   MIGRATION_GUIDE.md
+	new file:   STRIPE_IMPLEMENTATION_SUMMARY.md
+	new file:   STRIPE_SETUP_GUIDE.md
+	new file:   SUPABASE_EMAIL_FORWARDING_SETUP.md
+	new file:   SUPABASE_SETUP_CHECKLIST.md
+	new file:   back-end/.env.example
+	new file:   back-end/config/bot-creation-migration.sql
+	new file:   back-end/config/email-forwarding-migration.sql
+	new file:   back-end/config/emailForwardingDatabase.js
+	new file:   back-end/config/migrations.js
+	new file:   back-end/config/schema-check.js
+	new file:   back-end/config/stripe-integration-migration.sql
+	new file:   back-end/config/wallet-migration.sql
+	modified:   back-end/middleware/auth.js
+	modified:   back-end/package-lock.json
+	modified:   back-end/package.json
+	modified:   back-end/routes/auth.js
+	modified:   back-end/routes/bot.js
+	modified:   back-end/routes/marketplace.js
+	new file:   back-end/routes/payment.js
+	new file:   back-end/run-migration.js
+	modified:   back-end/server.js
+	new file:   back-end/services/EmailForwardingService.js
+	new file:   back-end/setup-migrations.mjs
+	new file:   back-end/test-gmail-full.js
+	new file:   back-end/test-gmail.js
+	new file:   back-end/utils/botTokenCrypto.js
+	new file:   back-end/utils/emailTransporter.js
+	deleted:    front-end/package-lock.json
+	modified:   front-end/package.json
+	modified:   front-end/src/App.jsx
+	new file:   front-end/src/components/BankAccountForm.jsx
+	new file:   front-end/src/components/BotCreation/DiscordBotForm.jsx
+	new file:   front-end/src/components/BotCreation/EmailBotForm.jsx
+	new file:   front-end/src/components/BotCreation/InstagramBotForm.jsx
+	new file:   front-end/src/components/BotCreation/SlackBotForm.jsx
+	new file:   front-end/src/components/BotCreation/TelegramBotForm.jsx
+	new file:   front-end/src/components/BotCreation/WhatsAppBotForm.jsx
+	new file:   front-end/src/components/DemoCheckoutModal.jsx
+	new file:   front-end/src/components/EditBotModal.jsx
+	new file:   front-end/src/components/SellerWalletDashboard.jsx
+	new file:   front-end/src/components/WithdrawalRequestForm.jsx
+	modified:   front-end/src/context/AuthContext.jsx
+	new file:   front-end/src/context/LanguageContext.jsx
+	new file:   front-end/src/locales/en.json
+	new file:   front-end/src/locales/es.json
+	new file:   front-end/src/locales/hi.json
+	new file:   front-end/src/locales/ml.json
+	new file:   front-end/src/locales/ta.json
+	modified:   front-end/src/main.jsx
+	modified:   front-end/src/pages/AdminDashboard.jsx
+	new file:   front-end/src/pages/BotCreationPage.jsx
+	new file:   front-end/src/pages/EmailForwarding.jsx
+	new file:   front-end/src/pages/FAQPage.jsx
+	modified:   front-end/src/pages/Login.jsx
+	modified:   front-end/src/utils/api.js
+	new file:   migrate.mjs
+	new file:   setup-migrations.mjs
+
+Unmerged paths:
+  (use "git add <file>..." to mark resolution)
+	both modified:   front-end/src/components/Navbar.jsx
+	both modified:   front-end/src/pages/BuyerDashboard.jsx
+	both modified:   front-end/src/pages/CreateMarketplaceBotPage.jsx
+	both modified:   front-end/src/pages/EmailBot.jsx
+	both modified:   front-end/src/pages/Marketplace.jsx
+	both modified:   front-end/src/pages/SellerDashboard.jsx
+	both modified:   front-end/src/pages/WhatsAppBot.jsx
+	both modified:   front-end/src/pages/WhatsAppCampaign.jsx
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	conflicts.txt
+	status.txt
+	status_after.txt
+

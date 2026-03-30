@@ -1,0 +1,53 @@
+{
+  "nav": {
+    "about": "Acerca de",
+    "contact": "Contacto",
+    "faq": "Preguntas Frecuentes",
+    "marketplace": "Mercado",
+    "dashboard": "Panel de Control",
+    "logout": "Cerrar Sesión",
+    "login": "Iniciar Sesión",
+    "signup": "Registrarse"
+  },
+  "home": {
+    "title": "Eleva Tu Conversación.",
+    "subtitle": "Automatiza Tu Éxito.",
+    "headline": "Desbloquea el potencial total de la comunicación autónoma. Compra, vende e implementa bots de alto rendimiento en WhatsApp, Telegram y Discord, todo desde un mercado fluido.",
+    "speed": "Latencia Ultra Baja",
+    "speedDesc": "< 200ms respuesta de mensaje.",
+    "governance": "Comando Basado en Roles",
+    "governanceDesc": "Control de permisos RBAC completo.",
+    "insights": "Flujos de Datos en Tiempo Real",
+    "insightsDesc": "Rastrear cada interacción en vivo.",
+    "capacity": "Escalado Infinito de Sesiones",
+    "capacityDesc": "Ejecuta 1,000+ bots simultáneamente.",
+    "assistance": "Depuración Impulsada por IA",
+    "assistanceDesc": "Auto-curación para sesiones rotas.",
+    "roadmap": "Mercado de IA Agentica",
+    "roadmapDesc": "Agentes autónomos de próxima generación."
+  },
+  "faq": {
+    "title": "Preguntas Frecuentes",
+    "subtitle": "Todo lo que necesitas saber sobre Botify",
+    "q1": "¿Qué es Botify?",
+    "a1": "Botify es un mercado de bots multi-mensajería donde puedes crear, comprar y vender bots autónomos para WhatsApp, Telegram, Discord, Email, Slack e Instagram.",
+    "q2": "¿Cómo creo un bot?",
+    "a2": "Regístrate como Vendedor, ve al Panel de Control, haz clic en 'Crear Nuevo Bot', selecciona tu plataforma (Email, WhatsApp, Telegram, etc.) e ingresa la configuración específica de la plataforma.",
+    "q3": "¿Puedo vender mis bots?",
+    "a3": "¡Sí! Una vez que crees un bot, puedes publicarlo en el mercado con un precio personalizado. Los compradores pueden luego comprar y acceder a tu bot con todas sus configuraciones e scripts.",
+    "q4": "¿Qué plataformas son compatibles?",
+    "a4": "Actualmente, Botify es compatible con: Email, WhatsApp, Telegram, Discord, Slack e Instagram. Pronto habrá más plataformas.",
+    "q5": "¿Cómo se manejan los pagos?",
+    "a5": "Los pagos se procesan de forma segura a través de nuestro sistema de pago. Cuando un comprador compra tu bot, los fondos se acreditan en tu cuenta después de completar la transacción.",
+    "q6": "¿Puedo personalizar el comportamiento del bot?",
+    "a6": "¡Absolutamente! Cada bot admite scripts personalizados y configuraciones. Puedes definir reglas de respuesta, plantillas, webhooks y más según la plataforma.",
+    "q7": "¿Hay un nivel gratuito?",
+    "a7": "Sí, puedes crear bots de forma gratuita. Vender bots en el mercado también es gratuito. Podemos introducir características premium en el futuro.",
+    "q8": "¿Qué tan seguras están mis credenciales de bot?",
+    "a8": "Todos los datos sensibles se cifran y almacenan de forma segura. Tienes control total sobre tus credenciales de bot y puedes revocar el acceso en cualquier momento.",
+    "q9": "¿Puedo actualizar mi bot después de publicarlo?",
+    "a9": "¡Sí! Puedes editar los detalles de tu bot, actualizar configuraciones y modificar scripts incluso después de publicar. Los cambios se aplican inmediatamente.",
+    "q10": "¿Qué hago si necesito ayuda?",
+    "a10": "Consulta nuestra documentación, contacta soporte a través de la página de Contacto o comunícate directamente con nuestro equipo. ¡Estamos aquí para ayudarte!"
+  }
+}

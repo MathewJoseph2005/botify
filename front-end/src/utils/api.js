@@ -57,6 +57,15 @@ export const botAPI = {
   }),
   getCampaigns: () => api.get('/bot/campaigns'),
   getCampaign: (campaignId) => api.get(`/bot/campaigns/${campaignId}`),
+  // Email Forwarding API
+  getEmailForwardingConfigs: () => api.get('/bot/email-forwarding'),
+  createEmailForwardingConfig: (config) => api.post('/bot/email-forwarding', config),
+  updateEmailForwardingConfig: (configId, config) => api.put(`/bot/email-forwarding/${configId}`, config),
+  deleteEmailForwardingConfig: (configId) => api.delete(`/bot/email-forwarding/${configId}`),
+  testEmailForwarding: (configId) => api.post(`/bot/email-forwarding/${configId}/test`),
+  getOAuthURL: () => api.get('/bot/email-forwarding/oauth/url'),
+  exchangeOAuthCode: (code) => api.post('/bot/email-forwarding/oauth/callback', { code }),
+  getEmailForwardingLogs: () => api.get('/bot/email-forwarding-logs'),
 };
 
 // WhatsApp API
@@ -77,6 +86,7 @@ export const marketplaceAPI = {
   // Seller endpoints
   createListing: (data) => api.post('/marketplace/create', data),
   getMyListings: () => api.get('/marketplace/my-listings'),
+  getListing: (id) => api.get(`/marketplace/my-listing/${id}`),
   updateListing: (id, data) => api.put(`/marketplace/update/${id}`, data),
   deleteListing: (id) => api.delete(`/marketplace/delete/${id}`),
   publishListing: (id, publish) => api.patch(`/marketplace/publish/${id}`, { publish }),
@@ -86,6 +96,20 @@ export const marketplaceAPI = {
   getDetails: (id) => api.get(`/marketplace/details/${id}`),
   purchase: (id) => api.post(`/marketplace/purchase/${id}`),
   getMyPurchases: () => api.get('/marketplace/my-purchases'),
+  getBotAccess: (id) => api.get(`/marketplace/bot/${id}/access`),
+};
+
+// Payments API
+export const paymentsAPI = {
+  createCheckoutSession: (data) => api.post('/payments/create-checkout-session', data),
+  confirmDemoPayment: (data) => api.post('/payments/confirm-demo-payment', data),
+  getSellerWallet: () => api.get('/payments/seller/wallet'),
+  getWalletTransactions: (params) => api.get('/payments/seller/wallet/transactions', { params }),
+  getBankAccounts: () => api.get('/payments/seller/bank-accounts'),
+  addBankAccount: (data) => api.post('/payments/seller/bank-accounts', data),
+  deleteBankAccount: (accountId) => api.delete(`/payments/seller/bank-accounts/${accountId}`),
+  createPayoutRequest: (data) => api.post('/payments/seller/payout-request', data),
+  getPayoutRequests: (params) => api.get('/payments/seller/payout-requests', { params }),
 };
 
 // Auth helper functions

@@ -96,7 +96,6 @@ const WA_STYLES = `
     gap: 10px;
     transition: all 0.2s;
   }
-  .file-pill:hover { border-color: rgba(255,255,255,0.12); }
 `;
 
 const INIT_STEPS = [
@@ -128,7 +127,6 @@ const getFileIcon = (filename) => {
   return '📎';
 };
 
-/* ── Step Indicator ────────────────────────────────────────────── */
 const StepIndicator = ({ currentStep }) => {
   const currentIdx = INIT_STEPS.findIndex(s => s.key === currentStep);
   return (
@@ -157,7 +155,6 @@ const StepIndicator = ({ currentStep }) => {
 const WhatsAppCampaign = () => {
   const { user } = useAuth();
 
-  /* connection / QR */
   const [qrCode, setQrCode]             = useState(null);
   const [waStatus, setWaStatus]         = useState('Not initialized');
   const [waReady, setWaReady]           = useState(false);
@@ -167,24 +164,22 @@ const WhatsAppCampaign = () => {
   const qrPollRef     = useRef(null);
   const factIntervalRef = useRef(null);
 
-  /* form */
   const [campaignName, setCampaignName]           = useState('');
   const [messageBody, setMessageBody]             = useState('');
   const [messageAttachment, setMessageAttachment] = useState(null);
   const [excelFile, setExcelFile]                 = useState(null);
   const [attachments, setAttachments]             = useState([]);
   const [dragOver, setDragOver]                   = useState(false);
+  const [campaignMode, setCampaignMode]           = useState('file'); 
+  const [manualRecipients, setManualRecipients]   = useState([{ name: '', phone: '' }]);
 
-  /* progress */
   const [activeCampaignId, setActiveCampaignId] = useState(null);
   const [progress, setProgress]                 = useState(null);
   const progressPollRef = useRef(null);
 
-  /* history */
   const [campaigns, setCampaigns]         = useState([]);
   const [campaignsLoading, setCampaignsLoading] = useState(false);
 
-  /* ui */
   const [sending, setSending] = useState(false);
   const [result, setResult]   = useState(null);
 
@@ -218,7 +213,7 @@ const WhatsAppCampaign = () => {
         setQrCode(res.data.qrCode || null);
         setInitStep(res.data.initStep || '');
       }
-    } catch { /* not yet initialised */ }
+    } catch { /* ignored */ }
   };
 
   const applyStatusData = (data) => {
@@ -246,7 +241,7 @@ const WhatsAppCampaign = () => {
               applyStatusData(qrRes.data);
               if (qrRes.data.isReady) clearInterval(qrPollRef.current);
             }
-          } catch { /* ignore transient */ }
+          } catch { /* ignore */ }
         }, 1500);
       }
     } catch (err) {
@@ -309,15 +304,31 @@ const WhatsAppCampaign = () => {
   const handleSendCampaign = async (e) => {
     e.preventDefault();
     setResult(null);
+
     if (!messageBody.trim()) return setResult({ type: 'error', message: 'Message body is required.' });
-    if (!excelFile)          return setResult({ type: 'error', message: 'Please upload a recipients file.' });
-    if (!waReady)            return setResult({ type: 'error', message: 'WhatsApp is not connected. Scan the QR code first.' });
+    
+    if (campaignMode === 'file') {
+      if (!excelFile) return setResult({ type: 'error', message: 'Please upload a recipients file.' });
+    } else {
+      if (manualRecipients.length === 0 || manualRecipients.some(r => !r.phone || !r.name)) {
+        return setResult({ type: 'error', message: 'Please enter valid manual recipients.' });
+      }
+    }
+    
+    if (!waReady) return setResult({ type: 'error', message: 'WhatsApp not connected.' });
 
     const formData = new FormData();
-    formData.append('excelFile', excelFile);
-    attachments.forEach(f => formData.append('attachment', f));
     formData.append('messageBody', messageBody);
-    formData.append('campaignName', campaignName || 'Untitled Campaign');
+    formData.append('campaignName', campaignName || 'WhatsApp Campaign');
+    
+    if (campaignMode === 'file') {
+      formData.append('excelFile', excelFile);
+    } else {
+      formData.append('manualRecipients', JSON.stringify(manualRecipients));
+    }
+
+    if (messageAttachment) formData.append('messageAttachment', messageAttachment);
+    attachments.forEach(f => formData.append('attachment', f));
 
     try {
       setSending(true);
@@ -325,9 +336,10 @@ const WhatsAppCampaign = () => {
       if (res.data.success) {
         setResult({ type: 'success', message: res.data.message });
         setActiveCampaignId(res.data.campaignId);
-        setProgress({ sent_count: 0, failed_count: 0, total_recipients: res.data.totalRecipients, status: 'sending' });
+        setProgress({ sent_count: 0, failed_count: 0, total_recipients: res.data.totalRecipients || 1, status: 'sending' });
         startProgressPolling(res.data.campaignId);
-        setCampaignName(''); setMessageBody(''); setExcelFile(null); setAttachments([]);
+        setCampaignName(''); setMessageBody(''); setExcelFile(null); setAttachments([]); setMessageAttachment(null);
+        setManualRecipients([{ name: '', phone: '' }]);
       }
     } catch (err) {
       setSending(false);
@@ -335,409 +347,191 @@ const WhatsAppCampaign = () => {
     }
   };
 
-  const progressPercent = progress
-    ? Math.round(((progress.sent_count + progress.failed_count) / Math.max(progress.total_recipients, 1)) * 100)
-    : 0;
+  const progressPercent = progress ? Math.round(((progress.sent_count + progress.failed_count) / Math.max(progress.total_recipients, 1)) * 100) : 0;
 
-  const statusDotColor = {
-    completed: 'bg-green-400',
-    sending:   'bg-blue-400',
-    scheduled: 'bg-purple-400',
-    failed:    'bg-red-400',
-    pending:   'bg-yellow-400',
-  };
-  const statusTextColor = {
-    completed: 'text-green-400',
-    sending:   'text-blue-400',
-    scheduled: 'text-purple-400',
-    failed:    'text-red-400',
-    pending:   'text-yellow-400',
-  };
+  const statusDotColor = { completed: 'bg-green-400', sending: 'bg-blue-400', scheduled: 'bg-purple-400', failed: 'bg-red-400', pending: 'bg-yellow-400' };
+  const statusTextColor = { completed: 'text-green-400', sending: 'text-blue-400', scheduled: 'text-purple-400', failed: 'text-red-400', pending: 'text-yellow-400' };
 
   return (
     <div className="min-h-screen bg-[#050505] text-white relative overflow-hidden pb-32" style={{ fontFamily: "'Inter', sans-serif" }}>
       <style>{WA_STYLES}</style>
       <Starfield />
 
-      {/* Ambient orbs */}
-      <div className="absolute top-[-5%] right-[-8%] w-[500px] h-[500px] opacity-[0.07] pointer-events-none"><FluidOrb /></div>
-      <div className="absolute bottom-[-10%] left-[-10%] w-[380px] h-[380px] opacity-[0.04] pointer-events-none"><FluidOrb /></div>
-
       <div className="max-w-5xl mx-auto px-6 lg:px-12 pt-16 relative z-10">
-
-        {/* ── Header ── */}
         <div className="mb-12 fade-up">
           <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.25em] mb-3">Botify · WhatsApp Engine</p>
-          <h1 className="text-4xl font-bold tracking-tight mb-2">
-            WhatsApp <span className="text-[#25d366] wa-glow">Bulk</span> Messaging
-          </h1>
-          <p className="text-white/30 text-sm max-w-lg leading-relaxed">
-            Connect your WhatsApp account, compose a personalised message, upload your contact list and launch campaigns at scale.
-          </p>
+          <h1 className="text-4xl font-bold tracking-tight mb-2">WhatsApp <span className="text-[#25d366] wa-glow">Bulk</span> Messaging</h1>
+          <p className="text-white/30 text-sm max-w-lg leading-relaxed">Connect, compose, and dispatch intelligent campaigns at global scale.</p>
         </div>
 
-        {/* ── Result Banner ── */}
         {result && (
           <div className={`mb-8 px-6 py-4 rounded-2xl glass-card flex items-center justify-between fade-up ${
             result.type === 'success' ? 'border-green-500/20 bg-green-500/5 text-green-400' : 'border-red-500/20 bg-red-500/5 text-red-400'
           }`}>
-            <div className="flex items-center gap-3">
-              <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${result.type === 'success' ? 'bg-green-400' : 'bg-red-400'}`}
-                style={{ boxShadow: result.type === 'success' ? '0 0 8px rgba(74,222,128,0.5)' : '0 0 8px rgba(248,113,113,0.5)' }} />
-              <span className="text-sm font-medium">{result.message}</span>
-            </div>
-            <button onClick={() => setResult(null)} className="opacity-40 hover:opacity-100 text-lg leading-none transition-opacity ml-4 shrink-0">&times;</button>
+             <div className="flex items-center gap-3">
+               <div className={`w-1.5 h-1.5 rounded-full ${result.type === 'success' ? 'bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]' : 'bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.5)]'}`} />
+               <span className="text-sm font-medium">{result.message}</span>
+             </div>
+             <button onClick={() => setResult(null)} className="opacity-40 hover:opacity-100">&times;</button>
           </div>
         )}
 
-        {/* ── Section 1: WhatsApp Connection ── */}
         <section className="glass-card p-8 mb-8 fade-up" style={{ animationDelay: '0.1s' }}>
           <div className="flex justify-between items-start mb-6">
             <div>
-              <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-white/50 mb-1 flex items-center gap-2">
-                <span className="w-1 h-1 rounded-full bg-[#25d366]" />
-                Session Link
-              </h2>
-              <p className="text-white/20 text-xs">Connect your WhatsApp account via QR scan</p>
+              <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-white/50 mb-1">Session Link</h2>
+              <p className="text-white/20 text-[10px] uppercase tracking-widest">Linked Terminal Status</p>
             </div>
-            {/* Connection status pill */}
-            <div className={`flex items-center gap-2 px-4 py-2 rounded-full border text-[10px] font-bold uppercase tracking-widest ${
-              waReady
-                ? 'bg-[#25d366]/10 border-[#25d366]/30 text-[#25d366]'
-                : waInitializing
-                ? 'bg-yellow-400/10 border-yellow-400/30 text-yellow-400'
-                : 'bg-white/[0.03] border-white/5 text-white/20'
-            }`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${
-                waReady ? 'bg-[#25d366] pulse-green' : waInitializing ? 'bg-yellow-400 animate-pulse' : 'bg-white/20'
-              }`} />
-              {waReady ? 'Connected' : waInitializing ? 'Initializing' : 'Offline'}
+            <div className={`px-4 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-widest ${waReady ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-white/5 border-white/5 text-white/20'}`}>
+              {waReady ? 'Ready' : 'Offline'}
             </div>
           </div>
 
-          {/* Step Indicator during init */}
           {waInitializing && <StepIndicator currentStep={initStep} />}
-
-          {/* Waiting fact */}
           {waInitializing && (
-            <div className="mb-6 px-5 py-4 rounded-2xl" style={{ background: 'rgba(255,215,0,0.04)', border: '1px solid rgba(255,215,0,0.08)' }}>
-              <p className="text-[10px] font-bold text-[#ffd700]/60 uppercase tracking-widest mb-1">Did you know?</p>
-              <p className="text-sm text-white/40 leading-relaxed">{WAITING_FACTS[factIndex]}</p>
-            </div>
+             <div className="mb-6 p-4 rounded-xl bg-[#25d366]/5 border border-[#25d366]/10">
+               <p className="text-[9px] font-bold text-[#25d366]/60 uppercase tracking-widest mb-1">Grid Log</p>
+               <p className="text-xs text-white/40 italic">{WAITING_FACTS[factIndex]}</p>
+             </div>
           )}
 
-          {/* Browser launching skeleton */}
-          {waInitializing && !qrCode && initStep === 'launching' && (
-            <div className="flex flex-col items-center gap-3 py-8">
-              <div className="w-48 h-48 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <div className="text-center">
-                  <div className="w-8 h-8 rounded-full border-2 border-[#25d366]/20 border-t-[#25d366] animate-spin-slow mx-auto mb-3" />
-                  <p className="text-xs text-white/30">Starting browser…</p>
-                  <p className="text-[10px] text-white/15 mt-1">First launch: 10–20 seconds</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* QR Code */}
           {!waReady && qrCode && (
-            <div className="flex flex-col items-center gap-4 py-4">
-              <p className="text-xs text-white/40 uppercase tracking-widest font-semibold">Scan with WhatsApp</p>
-              <div className="p-3 rounded-2xl" style={{ background: 'white' }}>
-                <img src={qrCode} alt="WhatsApp QR Code" className="w-56 h-56 rounded-lg" />
-              </div>
-              <p className="text-[10px] text-white/25 text-center">
-                WhatsApp → Settings → Linked Devices → Link a Device
-              </p>
+            <div className="flex flex-col items-center gap-4 py-6">
+               <div className="p-3 bg-white rounded-2xl">
+                 <img src={qrCode} alt="QR" className="w-52 h-52 rounded-lg" />
+               </div>
+               <p className="text-[10px] text-white/20 uppercase tracking-widest">Scan to synchronise terminal</p>
             </div>
           )}
 
-          {/* Connected state */}
-          {waReady && (
-            <div className="flex items-center gap-3 py-4 px-5 rounded-2xl mb-4" style={{ background: 'rgba(37,211,102,0.06)', border: '1px solid rgba(37,211,102,0.15)' }}>
-              <div className="w-2 h-2 rounded-full bg-[#25d366] shrink-0 pulse-green" />
-              <div>
-                <p className="text-sm font-bold text-[#25d366]">WhatsApp Connected</p>
-                <p className="text-xs text-white/30 mt-0.5">Your session is active and ready to send messages</p>
-              </div>
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-2">
-            {!waReady && (
-              <button onClick={handleInitWhatsApp} disabled={waInitializing} className="wa-btn">
-                {waInitializing
-                  ? <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin-slow inline-block" />Initializing…</span>
-                  : '⚡ Connect WhatsApp'}
-              </button>
-            )}
-            {(waReady || waInitializing) && (
-              <button onClick={handleLogout}
-                className="px-6 py-2.5 rounded-xl border border-red-500/20 text-red-400/60 hover:text-red-400 hover:border-red-500/40 font-bold text-[10px] uppercase tracking-widest transition-all">
-                Disconnect
-              </button>
-            )}
-            {!waReady && !waInitializing && (
-              <button onClick={checkStatus}
-                className="px-6 py-2.5 rounded-xl border border-white/5 text-white/25 hover:text-white/50 hover:border-white/15 font-bold text-[10px] uppercase tracking-widest transition-all">
-                ↻ Check Status
-              </button>
-            )}
+          <div className="flex gap-3">
+             {!waReady && (
+               <button onClick={handleInitWhatsApp} disabled={waInitializing} className="wa-btn">
+                 {waInitializing ? 'Linking...' : 'Connect WhatsApp'}
+               </button>
+             )}
+             {(waReady || waInitializing) && (
+               <button onClick={handleLogout} className="px-6 py-2 rounded-xl border border-red-500/20 text-red-400 text-[10px] font-bold uppercase tracking-widest">Disconnect</button>
+             )}
           </div>
         </section>
 
-        {/* ── Section 2: Campaign Form ── */}
         <section className="glass-card p-8 mb-8 fade-up" style={{ animationDelay: '0.2s' }}>
-          <div className="mb-6">
-            <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-white/50 flex items-center gap-2">
-              <span className="w-1 h-1 rounded-full bg-[#25d366]" />
-              New Campaign
-            </h2>
-            <p className="text-white/20 text-xs mt-1">Compose and dispatch your WhatsApp campaign</p>
-          </div>
-
-          <form onSubmit={handleSendCampaign} className="space-y-6">
-
-            {/* Campaign Name */}
-            <div>
-              <label className="block text-[10px] font-bold text-white/30 uppercase tracking-widest mb-2">Campaign Name</label>
-              <input
-                type="text" value={campaignName}
-                onChange={e => setCampaignName(e.target.value)}
-                placeholder="e.g. March Promo Blast"
-                className="w-full px-5 py-3.5 rounded-xl input-glass text-sm"
-              />
+          <form onSubmit={handleSendCampaign} className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+               <div>
+                 <label className="block text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">Campaign Designation</label>
+                 <input type="text" value={campaignName} onChange={e => setCampaignName(e.target.value)} placeholder="e.g. Nexus Protocol V1" className="w-full px-5 py-3 rounded-xl input-glass text-sm" />
+               </div>
+               <div>
+                  <label className="block text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">Transmission Mode</label>
+                  <div className="flex gap-2 p-1 rounded-xl bg-black/20 w-fit">
+                    <button type="button" onClick={() => setCampaignMode('file')} className={`px-4 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all ${campaignMode === 'file' ? 'bg-[#25d366] text-white' : 'text-white/30'}`}>File</button>
+                    <button type="button" onClick={() => setCampaignMode('manual')} className={`px-4 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all ${campaignMode === 'manual' ? 'bg-[#25d366] text-white' : 'text-white/30'}`}>Manual</button>
+                  </div>
+               </div>
             </div>
 
-            {/* Message Body */}
             <div>
-              <label className="block text-[10px] font-bold text-white/30 uppercase tracking-widest mb-2">
-                Message Body <span className="text-[#25d366]">*</span>
-                <span className="ml-2 text-white/15 normal-case font-normal tracking-normal">use {'{{name}}'} for personalisation</span>
-              </label>
-              <div className="relative">
-                <textarea
-                  value={messageBody}
-                  onChange={e => setMessageBody(e.target.value)}
-                  rows={5}
-                  placeholder={`Hi {{name}},\n\nWe have an exciting offer for you!`}
-                  className="w-full px-5 py-3.5 pr-14 rounded-xl input-glass text-sm resize-y"
-                  required
-                />
-                {/* Attachment icon */}
-                <button
-                  type="button"
-                  onClick={() => document.getElementById('msg-attach-input').click()}
-                  title="Attach file to message"
-                  className="absolute bottom-3 right-3 w-9 h-9 rounded-xl flex items-center justify-center transition-all text-white/25 hover:text-[#25d366]"
-                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                  </svg>
-                </button>
-                <input id="msg-attach-input" type="file" onChange={handleMessageAttachSelect} className="hidden" />
-              </div>
-              <p className="text-[10px] text-white/20 mt-2">Supports *bold*, _italic_, ~strikethrough~ formatting</p>
+               <label className="block text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">Neural Message Content</label>
+               <div className="relative">
+                 <textarea required rows={5} value={messageBody} onChange={e => setMessageBody(e.target.value)} placeholder="Define intelligence parameters..." className="w-full px-5 py-4 rounded-2xl input-glass text-sm" />
+                 <button type="button" onClick={() => document.getElementById('msg-file').click()} className="absolute bottom-3 right-3 p-2 rounded-lg bg-white/5 border border-white/10 text-white/30 hover:text-[#25d366]">📎</button>
+                 <input id="msg-file" type="file" onChange={handleMessageAttachSelect} className="hidden" />
+               </div>
+               {messageAttachment && <p className="text-[9px] text-[#25d366] mt-2 uppercase font-bold tracking-widest">✓ {messageAttachment.name}</p>}
+            </div>
 
-              {/* Message attachment preview */}
-              {messageAttachment && (
-                <div className="mt-3 file-pill">
-                  <span className="text-xl">{getFileIcon(messageAttachment.name)}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-white/70 truncate">{messageAttachment.name}</p>
-                    <p className="text-[10px] text-white/25">{(messageAttachment.size / 1024).toFixed(1)} KB</p>
-                  </div>
-                  <button type="button" onClick={() => setMessageAttachment(null)}
-                    className="text-red-400/40 hover:text-red-400 font-bold text-base transition-colors">×</button>
+            <div>
+              <label className="block text-[10px] font-bold text-white/30 uppercase tracking-widest mb-4">Recipient Intelligence</label>
+              {campaignMode === 'file' ? (
+                <div onDragOver={e => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)} onDrop={handleFileDrop} onClick={() => document.getElementById('main-file').click()}
+                  className={`drop-zone p-10 text-center ${dragOver ? 'drag-active' : ''}`}>
+                   {excelFile ? (
+                     <p className="text-[#25d366] font-bold text-sm uppercase tracking-widest">✓ {excelFile.name}</p>
+                   ) : (
+                     <div className="opacity-30">
+                        <p className="text-sm font-bold uppercase tracking-tighter mb-1">Drop Manifest Here</p>
+                        <p className="text-[9px] uppercase tracking-widest">Excel / CSV with name & phone</p>
+                     </div>
+                   )}
+                   <input id="main-file" type="file" accept=".xlsx,.xls,.csv" onChange={handleFileSelect} className="hidden" />
+                </div>
+              ) : (
+                <div className="space-y-3">
+                   <div className="max-h-64 overflow-y-auto pr-2 custom-scrollbar space-y-2">
+                      {manualRecipients.map((r, i) => (
+                        <div key={i} className="flex gap-2">
+                           <input type="text" placeholder="Name" value={r.name} onChange={e => { const n = [...manualRecipients]; n[i].name = e.target.value; setManualRecipients(n); }} className="flex-1 px-4 py-2 rounded-xl input-glass text-xs" />
+                           <input type="tel" placeholder="Phone" value={r.phone} onChange={e => { const n = [...manualRecipients]; n[i].phone = e.target.value; setManualRecipients(n); }} className="flex-1 px-4 py-2 rounded-xl input-glass text-xs" />
+                           <button type="button" onClick={() => setManualRecipients(manualRecipients.filter((_, idx) => idx !== i))} className="w-8 h-8 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all">&times;</button>
+                        </div>
+                      ))}
+                   </div>
+                   <button type="button" onClick={() => setManualRecipients([...manualRecipients, { name: '', phone: '' }])} className="text-[10px] font-black text-[#25d366] uppercase tracking-[0.2em]">+ Add Recipient</button>
                 </div>
               )}
             </div>
 
-            {/* Additional Attachments */}
-            <div>
-              <label className="block text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">
-                Attachments <span className="text-white/15 font-normal tracking-normal normal-case">— optional images / documents</span>
-              </label>
-              <label className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl cursor-pointer transition-all text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-white/70"
-                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Add Files
-                <input type="file" multiple onChange={handleAttachmentSelect} className="hidden" />
-              </label>
-              {attachments.length > 0 && (
-                <div className="mt-3 flex flex-col gap-2">
-                  {attachments.map((file, idx) => (
-                    <div key={idx} className="file-pill">
-                      <span className="text-base">{getFileIcon(file.name)}</span>
-                      <span className="text-xs text-white/50 truncate flex-1">{file.name}</span>
-                      <button type="button" onClick={() => removeAttachment(idx)}
-                        className="text-red-400/40 hover:text-red-400 font-bold text-base transition-colors ml-2">×</button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Recipients File – Drag & Drop */}
-            <div>
-              <label className="block text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">
-                Recipients File <span className="text-[#25d366]">*</span>
-                <span className="ml-2 text-white/15 font-normal tracking-normal normal-case">.xlsx · .xls · .csv</span>
-              </label>
-              <div
-                className={`drop-zone p-8 text-center ${dragOver ? 'drag-active' : excelFile ? 'has-file' : ''}`}
-                onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={handleFileDrop}
-                onClick={() => document.getElementById('wa-file-input').click()}
-              >
-                {excelFile ? (
-                  <div className="flex flex-col items-center gap-2">
-                    <span className="text-3xl">📊</span>
-                    <p className="text-sm font-bold text-[#25d366]">{excelFile.name}</p>
-                    <p className="text-[11px] text-white/25">{(excelFile.size / 1024).toFixed(1)} KB</p>
-                    <button type="button" onClick={e => { e.stopPropagation(); setExcelFile(null); }}
-                      className="mt-1 text-[10px] font-bold uppercase tracking-widest text-red-400/50 hover:text-red-400 transition-colors">
-                      Remove
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(37,211,102,0.08)', border: '1px solid rgba(37,211,102,0.12)' }}>
-                      <svg className="w-5 h-5 text-[#25d366]/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="text-sm text-white/50 font-medium">Drag & drop your file here</p>
-                      <p className="text-xs text-white/25 mt-1">or click to browse</p>
-                    </div>
-                    <p className="text-[10px] text-white/15">Must contain <strong className="text-white/30">name</strong> and <strong className="text-white/30">whatsapp_number</strong> columns</p>
-                  </div>
-                )}
-                <input id="wa-file-input" type="file" accept=".xlsx,.xls,.csv" onChange={handleFileSelect} className="hidden" />
-              </div>
-            </div>
-
-            {/* Submit */}
-            <button type="submit" disabled={sending || !waReady} className="wa-btn w-full py-4 rounded-2xl text-sm flex items-center justify-center gap-2">
-              {sending
-                ? <><span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin-slow" />Dispatching Campaign…</>
-                : '📱 Launch Campaign'}
+            <button type="submit" disabled={sending || !waReady} className="wa-btn w-fit px-12 py-4 text-xs">
+              {sending ? 'Transmitting...' : 'Launch Network Campaign'}
             </button>
-
-            {!waReady && (
-              <p className="text-center text-[11px] text-white/25">Connect WhatsApp above before launching a campaign</p>
-            )}
           </form>
         </section>
 
-        {/* ── Section 3: Live Progress ── */}
         {progress && (
-          <section className="glass-card p-8 mb-8 fade-up" style={{ animationDelay: '0.25s' }}>
+          <section className="glass-card p-8 mb-8 fade-up">
             <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-white/50 mb-6 flex items-center gap-2">
-              <span className="w-1 h-1 rounded-full bg-blue-400" />
-              Live Progress
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.5)]" />
+              Live Deployment Progress
             </h2>
-
-            {/* Progress Bar */}
-            <div className="w-full rounded-full h-2 mb-3 overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
-              <div
-                className="h-2 rounded-full transition-all duration-700"
-                style={{
-                  width: `${progressPercent}%`,
-                  background: progress.status === 'completed'
-                    ? 'linear-gradient(90deg, #25d366, #1abe5d)'
-                    : progress.status === 'failed'
-                    ? '#f87171'
-                    : 'linear-gradient(90deg, #60a5fa, #818cf8)',
-                  boxShadow: progress.status === 'completed' ? '0 0 12px rgba(37,211,102,0.4)' : '0 0 12px rgba(96,165,250,0.3)',
-                }}
-              />
+            <div className="w-full bg-white/5 rounded-full h-2 mb-4 overflow-hidden">
+               <div className="h-full bg-blue-500 transition-all duration-500 shadow-[0_0_12px_rgba(96,165,250,0.4)]" style={{ width: `${progressPercent}%` }} />
             </div>
-            <div className="flex justify-between text-[11px] text-white/30 mb-6">
-              <span>{progressPercent}% complete</span>
-              <span>{progress.sent_count + progress.failed_count} / {progress.total_recipients} contacts</span>
-            </div>
-
             <div className="grid grid-cols-3 gap-4">
-              {[
-                { label: 'Sent',  value: progress.sent_count,        color: 'text-green-400',  bg: 'rgba(74,222,128,0.06)',  border: 'rgba(74,222,128,0.12)' },
-                { label: 'Failed', value: progress.failed_count,     color: 'text-red-400',    bg: 'rgba(248,113,113,0.06)', border: 'rgba(248,113,113,0.12)' },
-                { label: 'Total', value: progress.total_recipients,  color: 'text-white/60',   bg: 'rgba(255,255,255,0.03)', border: 'rgba(255,255,255,0.06)' },
-              ].map(s => (
-                <div key={s.label} className="p-5 rounded-2xl text-center" style={{ background: s.bg, border: `1px solid ${s.border}` }}>
-                  <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
-                  <p className="text-[10px] text-white/25 uppercase tracking-widest font-bold mt-1">{s.label}</p>
-                </div>
-              ))}
+               {[
+                 { label: 'Sent', value: progress.sent_count, color: 'text-green-400' },
+                 { label: 'Failed', value: progress.failed_count, color: 'text-red-400' },
+                 { label: 'Total', value: progress.total_recipients, color: 'text-white/40' }
+               ].map(s => (
+                 <div key={s.label} className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 text-center">
+                    <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-white/20 mt-1">{s.label}</p>
+                 </div>
+               ))}
             </div>
-
-            {progress.status === 'completed' && (
-              <p className="mt-5 text-center text-sm font-bold text-[#25d366]">✓ Campaign completed successfully</p>
-            )}
-            {progress.status === 'failed' && (
-              <p className="mt-5 text-center text-sm font-bold text-red-400">✕ Campaign encountered errors</p>
-            )}
           </section>
         )}
 
-        {/* ── Section 4: Campaign History ── */}
         <section className="glass-card overflow-hidden fade-up" style={{ animationDelay: '0.3s' }}>
-          <div className="px-8 py-6 border-b border-white/5 flex justify-between items-center">
-            <div>
-              <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-white/50">Campaign History</h2>
-              <p className="text-white/20 text-xs mt-1">{campaigns.length} record{campaigns.length !== 1 ? 's' : ''}</p>
-            </div>
-            <button onClick={fetchCampaigns} disabled={campaignsLoading}
-              className="px-5 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest text-white/30 hover:text-white border border-white/5 hover:border-white/15 transition-all disabled:opacity-40">
-              {campaignsLoading ? 'Syncing…' : '↻ Refresh'}
-            </button>
-          </div>
-
-          {campaignsLoading && campaigns.length === 0 ? (
-            <div className="p-12 text-center">
-              <div className="w-8 h-8 rounded-full border-2 border-[#25d366]/20 border-t-[#25d366] animate-spin-slow mx-auto mb-3" />
-              <p className="text-white/25 text-xs uppercase tracking-widest">Loading records…</p>
-            </div>
-          ) : campaigns.length === 0 ? (
-            <div className="p-12 text-center">
-              <p className="text-white/20 text-sm">No campaigns yet. Start your first one above!</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
+           <div className="p-8 border-b border-white/5 flex justify-between items-center">
+             <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-white/50">Campaign Archive</h2>
+             <button onClick={fetchCampaigns} className="text-[9px] font-bold uppercase tracking-widest text-white/20 hover:text-white transition-colors">Sync records</button>
+           </div>
+           <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-white/5">
-                    {['Campaign', 'Recipients', 'Sent', 'Failed', 'Status', 'Date'].map(h => (
-                      <th key={h} className="px-6 py-4 text-[10px] font-bold text-white/20 uppercase tracking-widest">{h}</th>
+                    {['Manifest', 'Domain', 'Sent', 'Status', 'Date'].map(h => (
+                      <th key={h} className="px-8 py-4 text-[9px] font-bold text-white/10 uppercase tracking-widest">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.03]">
                   {campaigns.map(c => (
                     <tr key={c.id} className="group hover:bg-white/[0.02] transition-colors">
-                      <td className="px-6 py-4 text-sm font-bold text-white/80 group-hover:text-white max-w-[180px] truncate">{c.campaign_name}</td>
-                      <td className="px-6 py-4 text-sm text-white/40">{c.total_recipients}</td>
-                      <td className="px-6 py-4 text-sm font-bold text-green-400">{c.sent_count}</td>
-                      <td className="px-6 py-4 text-sm font-bold text-red-400">{c.failed_count}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-1.5 h-1.5 rounded-full ${statusDotColor[c.status] || 'bg-white/20'}`} />
-                          <span className={`text-[10px] font-bold uppercase tracking-widest ${statusTextColor[c.status] || 'text-white/30'}`}>{c.status}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-[11px] text-white/25">{new Date(c.created_at).toLocaleDateString()}</td>
+                       <td className="px-8 py-5 text-xs font-bold text-white/70 group-hover:text-white">{c.campaign_name}</td>
+                       <td className="px-8 py-5 text-xs text-white/30">{c.total_recipients} Nodes</td>
+                       <td className="px-8 py-5 text-xs font-bold text-green-400">{c.sent_count}</td>
+                       <td className="px-8 py-5">
+                          <span className={`text-[9px] font-black uppercase tracking-widest ${statusTextColor[c.status] || 'text-white/20'}`}>{c.status}</span>
+                       </td>
+                       <td className="px-8 py-5 text-[10px] text-white/20">{new Date(c.created_at).toLocaleDateString()}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
-          )}
+           </div>
         </section>
       </div>
     </div>

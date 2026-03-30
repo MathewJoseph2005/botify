@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ChevronDown, ArrowRight, Zap, Shield, Sparkles, Globe, BarChart3, Users } from 'lucide-react';
 import FluidOrb from '../components/FluidOrb';
 import GlassCard from '../components/GlassCard';
+import Logo from '../components/Logo';
 
 const featuresList = [
   { role: 'Global', label: 'Market Reach', heading: 'Omnichannel Deployment', footer: 'WhatsApp, Telegram, Discord.', icon: <Globe className="w-5 h-5" /> },
@@ -115,9 +116,8 @@ const MarqueeCard = memo(({ box }) => {
 });
 
 const STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;900&display=swap');
   body { font-family: 'Plus Jakarta Sans', sans-serif; }
-  /* hide the global navbar when on landing page */
   .navbar-glass { display: none !important; }
   html { scroll-behavior: smooth; }
   .hide-scrollbar::-webkit-scrollbar { display: none; }
@@ -151,11 +151,11 @@ const STYLES = `
 
   .text-glow-gold { text-shadow: 0 0 20px rgba(255,215,0,0.3); }
   
-  @keyframes float {
-    0%, 100% { transform: translateY(0px) scale(1); }
-    50% { transform: translateY(-14px) scale(1.02); }
+  @keyframes orbOverlapFloat {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-14px) scale(1.03); }
   }
-  .animate-float { animation: float 6s ease-in-out infinite; }
+  .orb-main-float { animation: orbOverlapFloat 6s ease-in-out infinite; }
 
   .bg-mesh {
     background-image: 
@@ -175,129 +175,107 @@ export default function LandingPage() {
         <div className="absolute inset-0 z-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
         <Starfield />
 
-        {/* Floating background orb - Matched to Login Page Style */}
-        <div className="absolute top-[12%] left-1/2 -translate-x-1/2 w-[580px] h-[580px] z-0 pointer-events-none opacity-[0.35] animate-float">
-          <div className="absolute inset-0 pointer-events-none"
-            style={{ background: 'radial-gradient(ellipse at center, rgba(255,215,0,0.04) 0%, transparent 70%)' }} />
-          <FluidOrb />
+        {/* Floating background orb - Unified with Login Page Style */}
+        <div className="absolute top-[15%] left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none z-0">
+           {/* Ambient central glow */}
+           <div className="absolute w-[600px] h-[600px] opacity-[0.4] pointer-events-none"
+             style={{ background: 'radial-gradient(ellipse 80% 70% at 50% 50%, rgba(255,215,0,0.06) 0%, transparent 70%)' }} />
+           
+           <div className="relative w-[540px] h-[540px] orb-main-float">
+             <FluidOrb />
+           </div>
         </div>
 
         {/* Global Nav */}
         <nav className="fixed top-0 left-0 w-full z-[100] px-6 py-8">
           <div className="max-w-[1400px] mx-auto flex items-center justify-between px-8 py-4 bg-white/[0.02] backdrop-blur-xl border border-white/[0.05] rounded-[32px] shadow-2xl">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-[#ffd700] rounded-xl flex items-center justify-center rotate-3 shadow-[0_0_20px_rgba(255,215,0,0.4)]">
-                <Zap className="w-4 h-4 text-black fill-black" />
-              </div>
-              <span className="text-xl font-extrabold tracking-tighter text-white">Botify</span>
-            </div>
+            <Link to="/" onClick={() => window.scrollTo(0, 0)}>
+               <Logo size="md" />
+            </Link>
             <div className="hidden lg:flex items-center gap-12 text-[11px] font-black uppercase tracking-[0.2em] text-white/40">
               <a href="#features" className="hover:text-[#ffd700] transition-colors">Features</a>
               <Link to="/marketplace" className="hover:text-[#ffd700] transition-colors">Marketplace</Link>
               <a href="#about" className="hover:text-[#ffd700] transition-colors">Core Tech</a>
-              <Link to="#" className="hover:text-[#ffd700] transition-colors flex items-center gap-1">EN <ChevronDown className="w-3 h-3" /></Link>
+              <button className="hover:text-[#ffd700] transition-colors flex items-center gap-1">EN <ChevronDown className="w-3 h-3" /></button>
             </div>
             <div className="flex items-center gap-2">
-              <Link to="/login" className="hidden sm:block text-[11px] font-black uppercase tracking-[0.2em] py-3 px-8 text-white/60 hover:text-white transition-all">Login</Link>
-              <Link to="/signup" className="text-[11px] font-black uppercase tracking-[0.2em] py-3.5 px-8 rounded-2xl bg-[#ffd700] text-black shadow-[0_10px_30px_rgba(255,215,0,0.2)] hover:scale-105 hover:shadow-[0_15px_40px_rgba(255,215,0,0.4)] active:scale-95 transition-all">
-                Join Beta
-              </Link>
+              <Link to="/login" className="px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-all">Sign In</Link>
+              <Link to="/signup" className="px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-[0.15em] text-[#050505] bg-[#ffd700] shadow-[0_4px_30px_rgba(255,215,0,0.25)] hover:scale-[1.03] transition-all">Get Started</Link>
             </div>
           </div>
         </nav>
 
-        <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-6">
-          <div className="max-w-5xl mx-auto text-center space-y-10">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.03] border border-white/[0.08] backdrop-blur-md animate-fade-in">
-              <div className="w-2 h-2 rounded-full bg-[#ffd700] animate-pulse shadow-[0_0_8px_#ffd700]" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#ffd700]/80">Agentic Era is here</span>
-            </div>
-
-            <h1 className="text-6xl md:text-8xl font-[800] tracking-tighter leading-[0.95] text-glow-gold">
-              Autonomous <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-b from-[#ffd700] via-[#ffd700] to-[#b89500]">Communication</span>
-            </h1>
-
-            <p className="text-lg md:text-xl font-medium text-white/40 max-w-3xl mx-auto leading-relaxed">
-              The premium marketplace for agentic AI. Deploy verified bots across <span className="text-white/80">WhatsApp</span>, <span className="text-white/80">Telegram</span>, and <span className="text-white/80">Discord</span> with zero-latency infrastructure.
-            </p>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-10">
-              <Link to="/marketplace" className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-white text-black font-black uppercase tracking-[0.2em] text-[12px] flex items-center justify-center gap-2 hover:bg-white/90 active:scale-95 transition-all group">
-                Explore Marketplace <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-              </Link>
-              <Link to="/login" className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-white/[0.03] border border-white/10 font-black uppercase tracking-[0.2em] text-[12px] hover:bg-white/[0.08] transition-all">
-                Sell your Bots
-              </Link>
-            </div>
+        {/* Content */}
+        <div className="relative z-10 flex flex-col items-center justify-center flex-1 text-center px-6 mt-[120px] sm:mt-0">
+          <div className="mb-6 px-4 py-2 rounded-full bg-white/[0.03] border border-white/[0.1] backdrop-blur-md fade-up">
+            <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#ffd700]">The Autonomous Economy is Here</span>
           </div>
-        </main>
-      </div>
-
-      {/* Feature Marquee Section */}
-      <section id="features" className="relative z-20 py-32 overflow-hidden">
-        <div className="max-w-[1400px] mx-auto px-10 mb-20 text-center md:text-left">
-          <h2 className="text-sm font-black uppercase tracking-[0.4em] text-[#ffd700]/60 mb-6">Market Capabilities</h2>
-          <p className="text-4xl md:text-6xl font-[700] tracking-tighter max-w-2xl leading-tight">
-            Built for the <span className="opacity-40">Infinite</span> Scale of AI agents.
+          <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-8 max-w-4xl leading-[0.95] fade-up delay-100">
+            Trade High-End <br/> <span className="text-[#ffd700] text-glow-gold">Neural Bots.</span>
+          </h1>
+          <p className="text-white/40 text-sm md:text-lg max-w-2xl leading-relaxed mb-12 fade-up delay-200">
+            The elite marketplace for AI-driven automation. Purchase verified bots for WhatsApp, Telegram, and E-mail with instant deployment.
           </p>
+          <div className="flex flex-col sm:flex-row items-center gap-6 fade-up delay-300">
+            <Link to="/signup" className="group relative px-10 py-5 bg-white text-black rounded-2xl font-black uppercase text-xs tracking-widest overflow-hidden hover:scale-[1.05] transition-transform">
+              <span className="relative z-10">Start Transacting</span>
+              <div className="absolute inset-x-0 bottom-0 h-1 bg-[#ffd700] transition-all group-hover:h-full group-hover:opacity-10 opacity-0" />
+            </Link>
+            <Link to="/marketplace" className="px-10 py-5 rounded-2xl font-black uppercase text-xs tracking-widest border border-white/10 hover:bg-white/5 transition-all flex items-center gap-2">
+              Browse Grid <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
         </div>
 
-        <div className="w-full relative marquee-container select-none">
-          {/* Gradient Edges */}
-          <div className="absolute top-0 left-0 w-32 md:w-80 h-full bg-gradient-to-r from-[#020202] to-transparent z-20 pointer-events-none" />
-          <div className="absolute top-0 right-0 w-32 md:w-80 h-full bg-gradient-to-l from-[#020202] to-transparent z-20 pointer-events-none" />
+        {/* Scroll Indicator */}
+        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 opacity-20 hover:opacity-100 transition-opacity cursor-pointer">
+          <span className="text-[9px] font-black uppercase tracking-[0.4em]">Scroll</span>
+          <div className="w-px h-12 bg-gradient-to-b from-white to-transparent" />
+        </div>
+      </div>
 
+      {/* Marquee Section */}
+      <section id="features" className="py-24 relative z-10">
+        <div className="marquee-container overflow-hidden py-12 border-y border-white/5">
           <div className="animate-marquee">
-            {doubled.map((box, i) => <MarqueeCard key={i} box={box} />)}
+            {doubled.map((box, i) => (
+              <MarqueeCard key={i} box={box} />
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Footer / Contact */}
-      <footer id="about" className="relative z-20 bg-[#050505] border-t border-white/[0.03] pt-32 pb-16 px-10">
-        <div className="max-w-[1400px] mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-20 mb-32">
-            <div className="col-span-1 md:col-span-2">
-              <div className="flex items-center gap-2 mb-8">
-                <Zap className="w-6 h-6 text-[#ffd700] fill-[#ffd700]" />
-                <span className="text-2xl font-black tracking-tighter">Botify</span>
+      {/* Stats/About Section */}
+      <section id="about" className="py-32 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+            {[
+              { label: 'Network Throughput', val: '2.4M', sub: 'Daily interactions' },
+              { label: 'Deployed Agents', val: '42k+', sub: 'Autonomous nodes' },
+              { label: 'Developer Yield', val: '$1.8M', sub: 'Total seller payouts' },
+              { label: 'System Uptime', val: '99.99%', sub: 'Zero-latency grid' },
+            ].map((s, i) => (
+              <div key={i} className="text-center group">
+                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 mb-4 group-hover:text-[#ffd700] transition-colors">{s.label}</h4>
+                <p className="text-5xl font-black tracking-tighter mb-2">{s.val}</p>
+                <p className="text-xs text-white/30">{s.sub}</p>
               </div>
-              <p className="text-white/30 text-lg leading-relaxed max-w-md">
-                We are building the backbone of the agentic economy. A secure, trustless environment for AI agents to communicate and transact globally.
-              </p>
-            </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#ffd700] mb-8">Navigation</p>
-              <ul className="space-y-4 text-[13px] font-bold text-white/40">
-                <li><Link to="/marketplace" className="hover:text-white transition-colors">Browse Market</Link></li>
-                <li><Link to="/login" className="hover:text-white transition-colors">Developer Portal</Link></li>
-                <li><a href="#" className="hover:text-white transition-colors">API Documentation</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Infrastructure Status</a></li>
-              </ul>
-            </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#ffd700] mb-8">Company</p>
-              <ul className="space-y-4 text-[13px] font-bold text-white/40">
-                <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Privacy Privacy</a></li>
-                <li><a href="mailto:support@botify.com" className="hover:text-white transition-colors">Enterprise Sales</a></li>
-                <li><a href="mailto:support@botify.com" className="hover:text-white transition-colors">Support Center</a></li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="pt-16 border-t border-white/[0.03] flex flex-col md:row items-center justify-between gap-8">
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/10">© 2025 BOTIFY CORE SYSTEMS. INC.</p>
-            <div className="flex gap-10 opacity-20 hover:opacity-100 transition-opacity">
-              <div className="w-5 h-5 bg-white rounded-full" />
-              <div className="w-5 h-5 bg-white rounded-full" />
-              <div className="w-5 h-5 bg-white rounded-full" />
-            </div>
+            ))}
           </div>
         </div>
-      </footer>
+      </section>
+
+      {/* CTA Footer */}
+      <section className="py-48 flex flex-col items-center justify-center text-center px-6">
+        <div className="w-[400px] h-[400px] absolute opacity-10 pointer-events-none">
+          <FluidOrb />
+        </div>
+        <h2 className="text-4xl md:text-6xl font-black tracking-tighter mb-12 relative z-10">Ready to <span className="text-[#ffd700]">Automate?</span></h2>
+        <Link to="/signup" className="relative z-10 px-12 py-6 bg-[#ffd700] text-black rounded-3xl font-black uppercase text-sm tracking-[0.2em] shadow-[0_20px_50px_rgba(255,215,0,0.3)] hover:scale-[1.05] transition-transform">
+          Connect to the Grid
+        </Link>
+        <p className="mt-12 text-white/20 text-[10px] font-black uppercase tracking-[0.4em]">Proprietary 2024 Botify Engine</p>
+      </section>
     </div>
   );
 }

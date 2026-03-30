@@ -1,9 +1,10 @@
 import { useState, useEffect, memo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { marketplaceAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import FluidOrb from '../components/FluidOrb';
 import ConfirmModal from '../components/ConfirmModal';
+import EditBotModal from '../components/EditBotModal';
 
 /* ── Starfield (Reused) ── */
 const Starfield = memo(() => {
@@ -70,15 +71,17 @@ const CATEGORIES = [
 ];
 
 const CreateMarketplaceBotPage = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
   const [deleteModal, setDeleteModal] = useState({ open: false, id: null });
+  const [editingListing, setEditingListing] = useState(null);
+  const [loadingListing, setLoadingListing] = useState(false);
 
   const [form, setForm] = useState({
     name: '',
@@ -97,9 +100,9 @@ const CreateMarketplaceBotPage = () => {
   const fetchListings = async () => {
     try {
       setLoading(true);
-      const res = await marketplaceAPI.getMyListings();
-      if (res.data.success) {
-        setListings(res.data.listings);
+      const response = await marketplaceAPI.getMyListings();
+      if (response.data.success) {
+        setListings(response.data.listings || []);
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch listings.');
@@ -110,7 +113,6 @@ const CreateMarketplaceBotPage = () => {
 
   const resetForm = () => {
     setForm({ name: '', description: '', platform: '', price: '', features: '', category: '', image_url: '' });
-    setEditingId(null);
     setShowForm(false);
   };
 
@@ -138,15 +140,12 @@ const CreateMarketplaceBotPage = () => {
 
     try {
       setSubmitting(true);
-      if (editingId) {
-        const res = await marketplaceAPI.updateListing(editingId, payload);
-        if (res.data.success) setSuccess('Agent manifesto updated successfully.');
-      } else {
-        const res = await marketplaceAPI.createListing(payload);
-        if (res.data.success) setSuccess('New autonomous agent initialised.');
+      const res = await marketplaceAPI.createListing(payload);
+      if (res.data.success) {
+        setSuccess('New autonomous agent initialised.');
+        resetForm();
+        fetchListings();
       }
-      resetForm();
-      fetchListings();
     } catch (err) {
       setError(err.response?.data?.message || 'System transmission error.');
     } finally {
@@ -154,19 +153,18 @@ const CreateMarketplaceBotPage = () => {
     }
   };
 
-  const handleEdit = (listing) => {
-    setForm({
-      name: listing.name,
-      description: listing.description || '',
-      platform: listing.platform,
-      price: listing.price.toString(),
-      features: listing.features ? listing.features.join(', ') : '',
-      category: listing.category || '',
-      image_url: listing.image_url || '',
-    });
-    setEditingId(listing.id);
-    setShowForm(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  const handleEdit = async (listing) => {
+    try {
+      setLoadingListing(true);
+      const response = await marketplaceAPI.getListing(listing.id);
+      if (response.data.success) {
+        setEditingListing(response.data.listing);
+      }
+    } catch (err) {
+      setError('Failed to load bot details');
+    } finally {
+      setLoadingListing(false);
+    }
   };
 
   const confirmDelete = async () => {
@@ -183,9 +181,8 @@ const CreateMarketplaceBotPage = () => {
     }
   };
 
-  const handlePublishToggle = async (id, currentStatus) => {
+  const handlePublish = async (id, publish) => {
     try {
-      const publish = currentStatus !== 'published';
       const res = await marketplaceAPI.publishListing(id, publish);
       if (res.data.success) {
         setSuccess(publish ? 'Agent deployed to global grid.' : 'Agent recalled to barracks.');
@@ -199,25 +196,28 @@ const CreateMarketplaceBotPage = () => {
   const publishedCount = listings.filter((l) => l.status === 'published').length;
   const totalSales = listings.reduce((sum, l) => sum + (l.total_sales || 0), 0);
 
+  const getPlatformEmoji = (platform) => {
+    const p = PLATFORMS.find(x => x.value === platform);
+    return p ? p.icon : '🤖';
+  };
+
   return (
     <div className="min-h-screen bg-[#050505] text-white relative overflow-hidden pb-32" style={{ fontFamily: "'Inter', sans-serif" }}>
       <style>{CREATE_STYLES}</style>
       <Starfield />
 
       <div className="max-w-7xl mx-auto px-6 lg:px-12 pt-16 relative z-10">
-        {/* Orbs */}
         <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] opacity-10 pointer-events-none">
           <FluidOrb />
         </div>
 
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 fade-up">
           <div>
             <h1 className="text-4xl font-bold tracking-tight mb-2">Manifest <span className="text-[#ffd700] gold-glow">Agent</span></h1>
             <p className="text-white/30 text-sm font-medium uppercase tracking-[0.2em]">Scale your automation empire</p>
           </div>
           <button
-            onClick={() => { setShowForm(!showForm); setEditingId(null); }}
+            onClick={() => { setShowForm(!showForm); }}
             className={`px-8 py-3 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all
               ${showForm ? 'bg-white/5 border border-white/10 text-white/40 hover:text-white' : 'bg-[#ffd700] text-[#050505] hover:scale-105'}
             `}
@@ -226,7 +226,6 @@ const CreateMarketplaceBotPage = () => {
           </button>
         </div>
 
-        {/* Alerts */}
         {(error || success) && (
           <div className={`mb-8 px-6 py-4 rounded-2xl glass-card flex items-center justify-between fade-up ${error ? 'border-red-500/20 bg-red-500/5 text-red-400' : 'border-green-500/20 bg-green-500/5 text-green-400'}`}>
             <span className="text-sm font-medium">{error || success}</span>
@@ -234,7 +233,6 @@ const CreateMarketplaceBotPage = () => {
           </div>
         )}
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12 fade-up" style={{ animationDelay: '0.1s' }}>
           {[
             { label: 'Registry Size', value: listings.length, color: 'text-white/60' },
@@ -249,12 +247,11 @@ const CreateMarketplaceBotPage = () => {
           ))}
         </div>
 
-        {/* Form */}
         {showForm && (
           <div className="glass-card p-8 mb-12 fade-up" style={{ animationDelay: '0.2s', background: 'rgba(255,255,255,0.02)' }}>
             <h2 className="text-xl font-bold mb-8 flex items-center gap-3">
               <span className="w-1.5 h-1.5 rounded-full bg-[#ffd700]" />
-              {editingId ? 'Edit Architectural Specs' : 'Deploy New Neural Asset'}
+              Deploy New Neural Asset
             </h2>
             <form onSubmit={handleSubmit} className="space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -345,7 +342,7 @@ const CreateMarketplaceBotPage = () => {
                   disabled={submitting}
                   className="px-10 py-3.5 rounded-2xl bg-[#ffd700] text-[#050505] font-black text-xs uppercase tracking-widest hover:scale-[1.03] transition-all disabled:opacity-50"
                 >
-                  {submitting ? 'PROCESSING...' : editingId ? 'UPDATE SPECS' : 'DEPLOY TO GRID'}
+                  {submitting ? 'PROCESSING...' : 'DEPLOY TO GRID'}
                 </button>
                 <button
                   type="button"
@@ -359,7 +356,6 @@ const CreateMarketplaceBotPage = () => {
           </div>
         )}
 
-        {/* Registry Table */}
         <div className="glass-card overflow-hidden fade-up" style={{ animationDelay: '0.3s' }}>
           <div className="p-8 border-b border-white/5 flex justify-between items-center">
             <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-white/50">Neural Registry</h2>
@@ -385,7 +381,7 @@ const CreateMarketplaceBotPage = () => {
                       <div className="text-[10px] text-white/20 font-medium uppercase mt-1">{l.category || 'Uncategorised'}</div>
                     </td>
                     <td className="px-8 py-5">
-                      <span className="text-lg mr-2 inline-block grayscale group-hover:grayscale-0 transition-all">{PLATFORMS.find(p => p.value === l.platform)?.icon || '🤖'}</span>
+                      <span className="text-lg mr-2 inline-block grayscale group-hover:grayscale-0 transition-all">{getPlatformEmoji(l.platform)}</span>
                       <span className="text-[11px] font-bold text-white/40 uppercase">{l.platform}</span>
                     </td>
                     <td className="px-8 py-5 text-sm font-bold text-[#ffd700]/80">${parseFloat(l.price).toFixed(2)}</td>
@@ -397,9 +393,9 @@ const CreateMarketplaceBotPage = () => {
                     </td>
                     <td className="px-8 py-5 text-right">
                       <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => handlePublishToggle(l.id, l.status)} className="text-[10px] font-bold text-white/40 hover:text-[#ffd700] uppercase tracking-widest">{l.status === 'published' ? 'Recall' : 'Deploy'}</button>
+                        <button onClick={() => handlePublish(l.id, l.status !== 'published')} className="text-[10px] font-bold text-white/40 hover:text-[#ffd700] uppercase tracking-widest">{l.status === 'published' ? 'Recall' : 'Deploy'}</button>
                         <button onClick={() => handleEdit(l)} className="text-[10px] font-bold text-white/40 hover:text-white uppercase tracking-widest">Adjust</button>
-                        <button onClick={() => setDeleteModal({ open: true, id: l.id })} className="text-[10px] font-bold text-red-400/40 hover:text-red-400 uppercase tracking-widest">Purge</button>
+                        <button onClick={() => setDeleteModal({ open: false, id: l.id })} className="text-[10px] font-bold text-red-400/40 hover:text-red-400 uppercase tracking-widest">Purge</button>
                       </div>
                     </td>
                   </tr>
@@ -419,6 +415,15 @@ const CreateMarketplaceBotPage = () => {
         confirmText="Confirm Purge"
         variant="danger"
       />
+
+      {editingListing && (
+        <EditBotModal
+          listing={editingListing}
+          isLoading={loadingListing}
+          onClose={() => setEditingListing(null)}
+          onUpdate={fetchListings}
+        />
+      )}
     </div>
   );
 };

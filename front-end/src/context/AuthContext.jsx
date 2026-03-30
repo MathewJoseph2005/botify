@@ -28,14 +28,18 @@ export const AuthProvider = ({ children }) => {
       }
 
       try {
+        console.log('[AuthContext] Verifying token...');
         const response = await authAPI.verify();
         if (response.data.success) {
+          console.log('[AuthContext] Token verified successfully');
           setUser(response.data.user);
           localStorage.setItem('user', JSON.stringify(response.data.user));
         } else {
+          console.warn('[AuthContext] Token verification failed:', response.data.message);
           logout();
         }
-      } catch {
+      } catch (err) {
+        console.error('[AuthContext] Token verification error:', err.response?.data?.message || err.message);
         logout();
       } finally {
         setLoading(false);
@@ -46,6 +50,7 @@ export const AuthProvider = ({ children }) => {
   }, [token]);
 
   const login = useCallback((newToken, userData) => {
+    console.log('[AuthContext] Logging in user:', userData);
     localStorage.setItem('token', newToken);
     localStorage.setItem('user', JSON.stringify(userData));
     setToken(newToken);
@@ -53,6 +58,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const logout = useCallback(() => {
+    console.log('[AuthContext] Logging out');
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setToken(null);

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, memo } from 'react';
+import { useState, useRef, memo, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { authAPI } from '../utils/api';
@@ -9,10 +9,8 @@ import Logo from '../components/Logo';
 
 /* ─────────────── Starfield (matches landing page exactly) ─────────────── */
 const Starfield = memo(() => {
-  const [stars, setStars] = useState([]);
-  const [shootingStars, setShootingStars] = useState([]);
-  useEffect(() => {
-    setStars(Array.from({ length: 120 }, (_, i) => ({
+  const [stars] = useState(() =>
+    Array.from({ length: 120 }, (_, i) => ({
       id: i,
       left: `${Math.random() * 100}%`,
       top: `${Math.random() * 100}%`,
@@ -20,15 +18,18 @@ const Starfield = memo(() => {
       animDelay: `${Math.random() * 5}s`,
       animDur: `${Math.random() * 4 + 2}s`,
       opacity: Math.random() * 0.5 + 0.4,
-    })));
-    setShootingStars(Array.from({ length: 5 }, (_, i) => ({
+    }))
+  );
+  const [shootingStars] = useState(() =>
+    Array.from({ length: 5 }, (_, i) => ({
       id: `s${i}`,
       left: `${Math.random() * 80 + 10}%`,
       top: `${Math.random() * 40 - 20}%`,
       animDelay: `${Math.random() * 12}s`,
       animDur: `${Math.random() * 5 + 4}s`,
-    })));
-  }, []);
+    }))
+  );
+
   return (
     <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-80">
       {stars.map(s => (
@@ -362,14 +363,21 @@ const Login = () => {
         setPortalUser(response.data.user);
         setShowPortal(true);
         setTimeout(() => {
-          const r = response.data.user.role_name;
-          if (r === 'admin') navigate('/dashboard/admin');
-          else if (r === 'seller') navigate('/dashboard/seller');
-          else navigate('/dashboard/buyer');
+          try {
+            const r = response.data.user.role_name;
+            if (r === 'admin') navigate('/dashboard/admin');
+            else if (r === 'seller') navigate('/dashboard/seller');
+            else navigate('/dashboard/buyer');
+          } catch (navErr) {
+            console.error('Navigation error:', navErr);
+            setError('Failed to navigate to dashboard. Please refresh and try again.');
+            setShowPortal(false);
+          }
         }, 2200);
       }
     } catch (err) {
       setSubmitState('error');
+      console.error('Login error:', err);
       setError(err.response?.data?.message || 'Login failed. Please try again.');
       if (formRef.current) formRef.current.classList.add('error-shake');
       setTimeout(() => {

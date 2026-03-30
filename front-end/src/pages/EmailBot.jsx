@@ -147,6 +147,12 @@ const EmailBot = () => {
   const [excelFile, setExcelFile] = useState(null);
   const [attachments, setAttachments] = useState([]);
   const [dragOver, setDragOver] = useState(false);
+  
+  // ── Manual Entry State ───────────────────────────────────────────────────
+  const [campaignMode, setCampaignMode] = useState('file'); // 'file' or 'manual'
+  const [manualRecipients, setManualRecipients] = useState([
+    { name: '', email: '' }
+  ]);
 
   const [campaigns, setCampaigns] = useState([]);
   const [campaignsLoading, setCampaignsLoading] = useState(false);
@@ -261,8 +267,19 @@ const EmailBot = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedBotId) { setResult({ type: 'error', message: 'Select a bot first.' }); return; }
-    if (!subject || !messageBody || !excelFile) {
-      setResult({ type: 'error', message: 'Subject, message body, and recipient file are required.' }); return;
+    if (!subject || !messageBody) {
+      setResult({ type: 'error', message: 'Subject and message body are required.' }); return;
+    }
+
+    // Validate based on mode
+    if (campaignMode === 'file') {
+      if (!excelFile) {
+        setResult({ type: 'error', message: 'Recipient file is required.' }); return;
+      }
+    } else {
+      if (manualRecipients.length === 0 || manualRecipients.some(r => !r.email || !r.name)) {
+        setResult({ type: 'error', message: 'Please enter at least one recipient with name and email.' }); return;
+      }
     }
     try {
       setCampaignLoading(true);
@@ -270,14 +287,18 @@ const EmailBot = () => {
       formData.append('subject', subject);
       formData.append('messageBody', messageBody);
       if (scheduledTime) formData.append('scheduledTime', scheduledTime);
-      formData.append('excelFile', excelFile);
-      attachments.forEach(file => formData.append('attachment', file));
+      // Handle based on mode
+      if (campaignMode === 'file') {
+        formData.append('excelFile', excelFile);
+      } else {
+        formData.append('manualRecipients', JSON.stringify(manualRecipients));
+      }
+
+      attachments.forEach((file) => formData.append('attachment', file));
+
       const response = await botAPI.emailCampaign(selectedBotId, formData);
       if (response.data.success) {
         setResult({ type: 'success', message: response.data.message });
-        setSubject(''); setMessageBody(''); setScheduledTime('');
-        setExcelFile(null); setAttachments([]);
-        fetchCampaigns();
       }
     } catch (err) {
       setResult({ type: 'error', message: err.response?.data?.message || 'Failed to schedule campaign.' });
@@ -516,15 +537,42 @@ const EmailBot = () => {
               </div>
             </section>
 
-            {/* Payload Files */}
+            {/* Recipients Section */}
             <section className="glass-card p-8">
               <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-white/50 mb-6 flex items-center gap-2">
                 <span className="w-1 h-1 rounded-full bg-[#ffd700]" />
-                Payload Files
+                Recipients
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Recipients – Drag & Drop */}
-                <div>
+
+              {/* Mode Tabs */}
+              <div className="flex gap-2 mb-6 p-1 rounded-xl bg-white/[0.03] border border-white/5 w-fit">
+                <button
+                  type="button"
+                  onClick={() => setCampaignMode('file')}
+                  className={`px-6 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${
+                    campaignMode === 'file'
+                      ? 'bg-[#ffd700] text-[#050505] shadow-[0_0_12px_rgba(255,215,0,0.3)]'
+                      : 'text-white/40 hover:text-white/70'
+                  }`}
+                >
+                  📁 Upload File
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCampaignMode('manual')}
+                  className={`px-6 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${
+                    campaignMode === 'manual'
+                      ? 'bg-[#ffd700] text-[#050505] shadow-[0_0_12px_rgba(255,215,0,0.3)]'
+                      : 'text-white/40 hover:text-white/70'
+                  }`}
+                >
+                  ✏️ Manual Entry
+                </button>
+              </div>
+
+              {/* File Upload Mode */}
+              {campaignMode === 'file' && (
+                <div className="space-y-4">
                   <label className="block text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">
                     Recipient List <span className="text-[#ffd700]">*</span>
                     <span className="ml-2 text-white/15 font-normal tracking-normal normal-case">.xlsx · .xls · .csv</span>
@@ -565,72 +613,135 @@ const EmailBot = () => {
                       onChange={e => { if (e.target.files[0]) setExcelFile(e.target.files[0]); }} className="hidden" />
                   </div>
                 </div>
+              )}
 
-                {/* Attachments */}
-                <div>
-                  <label className="block text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">
-                    Attachments <span className="text-white/15 font-normal tracking-normal normal-case">— optional</span>
-                  </label>
-                  <label className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl cursor-pointer transition-all text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-white/70 mb-3"
-                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    Add Files
-                    <input type="file" multiple className="hidden"
-                      onChange={e => { if (e.target.files.length) setAttachments(prev => [...prev, ...Array.from(e.target.files)]); }} />
-                  </label>
-                  {attachments.length === 0 && (
-                    <p className="text-[10px] text-white/20">Images, PDFs, documents — send alongside your email</p>
-                  )}
-                  {attachments.length > 0 && (
-                    <div className="flex flex-col gap-2">
-                      {attachments.map((file, idx) => (
-                        <div key={idx} className="file-pill">
-                          <span className="text-base shrink-0">{getFileIcon(file.name)}</span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-bold text-white/60 truncate">{file.name}</p>
-                            <p className="text-[10px] text-white/25">{(file.size / 1024).toFixed(1)} KB</p>
-                          </div>
-                          <button type="button" onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))}
-                            className="text-red-400/40 hover:text-red-400 font-bold text-base transition-colors shrink-0">×</button>
+              {/* Manual Entry Mode */}
+              {campaignMode === 'manual' && (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/10 mb-4">
+                    <p className="text-xs text-blue-400/70 leading-relaxed font-medium">
+                      Add recipients manually below. Ensure each entry has a valid name and email address.
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-3 max-h-[320px] overflow-y-auto pr-2 custom-scrollbar">
+                    {manualRecipients.map((recipient, idx) => (
+                      <div key={idx} className="flex gap-3 items-end group animate-fade-in">
+                        <div className="flex-[0.4]">
+                          <label className="block text-[9px] font-bold text-white/20 uppercase tracking-widest mb-1.5 ml-1">Name</label>
+                          <input
+                            type="text"
+                            value={recipient.name}
+                            onChange={(e) => {
+                              const updated = [...manualRecipients];
+                              updated[idx].name = e.target.value;
+                              setManualRecipients(updated);
+                            }}
+                            placeholder="John Doe"
+                            className="w-full px-4 py-2.5 rounded-xl input-glass text-xs"
+                          />
                         </div>
-                      ))}
-                    </div>
-                  )}
+                        <div className="flex-1">
+                          <label className="block text-[9px] font-bold text-white/20 uppercase tracking-widest mb-1.5 ml-1">Email</label>
+                          <input
+                            type="email"
+                            value={recipient.email}
+                            onChange={(e) => {
+                              const updated = [...manualRecipients];
+                              updated[idx].email = e.target.value;
+                              setManualRecipients(updated);
+                            }}
+                            placeholder="john@example.com"
+                            className="w-full px-4 py-2.5 rounded-xl input-glass text-xs"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setManualRecipients(manualRecipients.filter((_, i) => i !== idx))}
+                          className="w-10 h-10 rounded-xl flex items-center justify-center text-red-400/30 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setManualRecipients([...manualRecipients, { name: '', email: '' }])}
+                    className="mt-2 w-full py-3 rounded-xl border border-dashed border-white/10 text-white/30 hover:text-[#ffd700] hover:border-[#ffd700]/30 hover:bg-[#ffd700]/5 transition-all text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2"
+                  >
+                    <span>+</span> Add Recipient Entry
+                  </button>
                 </div>
-              </div>
+              )}
             </section>
 
-            {/* Scheduling */}
-            <section className="glass-card p-8">
-              <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-white/50 mb-6 flex items-center gap-2">
-                <span className="w-1 h-1 rounded-full bg-[#ffd700]" />
-                Scheduling <span className="text-white/20 font-normal normal-case tracking-normal text-xs ml-1">— optional</span>
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-[10px] font-bold text-white/30 uppercase tracking-widest mb-2">
-                    Dispatch Time
-                  </label>
-                  <input type="datetime-local" value={scheduledTime} onChange={e => setScheduledTime(e.target.value)}
-                    className="w-full px-5 py-3.5 rounded-xl input-glass text-sm"
-                    style={{ colorScheme: 'dark' }} />
-                  <p className="text-[10px] text-white/15 mt-2">Leave empty to send immediately</p>
-                </div>
-                <div className="flex flex-col justify-center gap-3 p-5 rounded-2xl"
-                  style={{ background: 'rgba(255,215,0,0.03)', border: '1px solid rgba(255,215,0,0.08)' }}>
-                  <p className="text-[10px] font-bold text-white/25 uppercase tracking-widest">Delivery Mode</p>
-                  <div className="flex items-center gap-3">
+            {/* Attachments & Scheduling */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Attachments Section */}
+              <section className="glass-card p-8">
+                <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-white/50 mb-6 flex items-center gap-2">
+                  <span className="w-1 h-1 rounded-full bg-[#ffd700]" />
+                  Attachments
+                </h2>
+                
+                <label className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl cursor-pointer transition-all text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-white/70 mb-4 w-full justify-center"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Choose Payload Files
+                  <input type="file" multiple className="hidden"
+                    onChange={e => { if (e.target.files.length) setAttachments(prev => [...prev, ...Array.from(e.target.files)]); }} />
+                </label>
+                {attachments.length === 0 ? (
+                  <p className="text-[10px] text-white/15 leading-relaxed">Images, PDFs, or documents to be included with your dispatch.</p>
+                ) : (
+                  <div className="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
+                    {attachments.map((file, idx) => (
+                      <div key={idx} className="file-pill">
+                        <span className="text-base shrink-0">{getFileIcon(file.name)}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-white/60 truncate">{file.name}</p>
+                          <p className="text-[10px] text-white/25">{(file.size / 1024).toFixed(1)} KB</p>
+                        </div>
+                        <button type="button" onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))}
+                          className="text-red-400/40 hover:text-red-400 font-bold text-base transition-colors shrink-0">×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              {/* Scheduling Section */}
+              <section className="glass-card p-8">
+                <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-white/50 mb-6 flex items-center gap-2">
+                  <span className="w-1 h-1 rounded-full bg-[#ffd700]" />
+                  Scheduling
+                </h2>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-white/30 uppercase tracking-widest mb-2 ml-1">Dispatch Time</label>
+                    <input type="datetime-local" value={scheduledTime} onChange={e => setScheduledTime(e.target.value)}
+                      className="w-full px-5 py-3.5 rounded-xl input-glass text-sm"
+                      style={{ colorScheme: 'dark' }} />
+                  </div>
+                  
+                  <div className="p-4 rounded-xl flex items-center gap-3"
+                    style={{ background: 'rgba(255,215,0,0.03)', border: '1px solid rgba(255,215,0,0.08)' }}>
                     <div className={`w-2 h-2 rounded-full ${scheduledTime ? 'bg-purple-400' : 'bg-[#ffd700]'}`}
                       style={{ boxShadow: scheduledTime ? '0 0 8px rgba(192,132,252,0.6)' : '0 0 8px rgba(255,215,0,0.6)' }} />
-                    <p className="text-sm font-bold text-white/70">
-                      {scheduledTime ? `Scheduled: ${new Date(scheduledTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}` : 'Immediate dispatch'}
+                    <p className="text-[11px] font-bold text-white/50 uppercase tracking-wider">
+                      {scheduledTime ? `Log: ${new Date(scheduledTime).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}` : 'Immediate Execution'}
                     </p>
                   </div>
                 </div>
-              </div>
-            </section>
+              </section>
+            </div>
 
             {/* Submit */}
             <button type="submit" disabled={campaignLoading || !selectedBot}

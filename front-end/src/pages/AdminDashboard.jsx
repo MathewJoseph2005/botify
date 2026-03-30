@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { adminAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import StatCard from '../components/StatCard';
@@ -241,6 +242,33 @@ const AdminDashboard = () => {
               </button>
             ))}
           </nav>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="bg-white rounded-lg shadow mb-8">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-xl font-semibold text-gray-900">Quick Actions</h2>
+          </div>
+          <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Link
+              to="/email-forwarding"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg transition duration-200 text-center"
+            >
+              Email Forwarding
+            </Link>
+            <Link
+              to="/email-bot"
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition duration-200 text-center"
+            >
+              Manage Email Bots
+            </Link>
+            <button
+              onClick={loadAll}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition duration-200"
+            >
+              Refresh Data
+            </button>
+          </div>
         </div>
 
         {/* ==================== OVERVIEW TAB ==================== */}

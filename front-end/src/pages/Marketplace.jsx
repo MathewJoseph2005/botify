@@ -3,6 +3,7 @@ import { marketplaceAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import FluidOrb from '../components/FluidOrb';
 import Modal from '../components/Modal';
+import DemoCheckoutModal from '../components/DemoCheckoutModal';
 
 /* ── Starfield (reused) ── */
 const Starfield = memo(() => {
@@ -91,17 +92,33 @@ const Marketplace = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [purchasing, setPurchasing] = useState(null);
   const [selectedBot, setSelectedBot] = useState(null);
+  const [checkoutModal, setCheckoutModal] = useState({ open: false, bot: null });
+  const [purchasedBotIds, setPurchasedBotIds] = useState([]); 
+  const [resourceModal, setResourceModal] = useState({ open: false, bot: null, loading: false, resource: null });
 
-  // Filters
   const [platform, setPlatform] = useState('');
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('newest');
 
   useEffect(() => {
     fetchListings();
-  }, [platform, sort]);
+    if (isAuthenticated && user?.role_id === 3) {
+      fetchUserPurchases();
+    }
+  }, [platform, sort, isAuthenticated]);
+
+  const fetchUserPurchases = async () => {
+    try {
+      const res = await marketplaceAPI.getMyPurchases();
+      if (res.data.success) {
+        const botIds = res.data.purchases?.map(p => p.marketplace_bot_id) || [];
+        setPurchasedBotIds(botIds);
+      }
+    } catch (err) {
+      console.error('Error fetching purchases:', err);
+    }
+  };
 
   const fetchListings = async () => {
     try {
@@ -128,7 +145,7 @@ const Marketplace = () => {
     fetchListings();
   };
 
-  const handlePurchase = async (botId) => {
+  const handlePurchase = (bot) => {
     if (!isAuthenticated) {
       setError('Authorisation required. Please sign in as a Buyer.');
       return;
@@ -137,20 +154,28 @@ const Marketplace = () => {
       setError('Action restricted. Only Buyer accounts can acquire bots.');
       return;
     }
-    
+    setCheckoutModal({ open: true, bot });
+    setError('');
+  };
+
+  const handleCheckoutSuccess = () => {
+    setCheckoutModal({ open: false, bot: null });
+    setSuccess('🎉 Purchase completed successfully!');
+    fetchUserPurchases(); 
+    fetchListings();
+    setTimeout(() => setSuccess(''), 5000);
+  };
+
+  const handleViewResources = async (bot) => {
     try {
-      setPurchasing(botId);
-      setError('');
-      const res = await marketplaceAPI.purchase(botId);
+      setResourceModal({ open: true, bot, loading: true, resource: null });
+      const res = await marketplaceAPI.getBotAccess(bot.id);
       if (res.data.success) {
-        setSuccess('Acquisition successful. Deployment initialised in your dashboard.');
-        fetchListings();
-        setSelectedBot(null);
+        setResourceModal({ open: true, bot, loading: false, resource: res.data.bot });
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Transaction failed.');
-    } finally {
-      setPurchasing(null);
+      setError(err.response?.data?.message || 'Failed to load bot resources.');
+      setResourceModal(prev => ({ ...prev, loading: false }));
     }
   };
 
@@ -161,9 +186,7 @@ const Marketplace = () => {
       <style>{MARKETPLACE_STYLES}</style>
       <Starfield />
 
-      {/* Hero / Header Section */}
       <div className="relative pt-20 pb-16 px-6 sm:px-12 max-w-7xl mx-auto z-10">
-        {/* Orbs */}
         <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[800px] h-[600px] opacity-20 pointer-events-none">
           <FluidOrb />
         </div>
@@ -178,7 +201,6 @@ const Marketplace = () => {
           </p>
         </div>
 
-        {/* Global Search & Alert */}
         <div className="max-w-3xl mx-auto mb-12 fade-up fade-up-1">
           <form onSubmit={handleSearch} className="relative group">
             <input
@@ -196,21 +218,14 @@ const Marketplace = () => {
             </button>
           </form>
 
-          {error && (
-            <div className="mt-4 px-5 py-3 rounded-xl border border-red-500/20 bg-red-500/5 text-red-400 text-xs flex justify-between items-center animate-shake">
-              <span>{error}</span>
-              <button onClick={() => setError('')} className="opacity-50 hover:opacity-100">&times;</button>
-            </div>
-          )}
-          {success && (
-            <div className="mt-4 px-5 py-3 rounded-xl border border-green-500/20 bg-green-500/5 text-green-400 text-xs flex justify-between items-center">
-              <span>{success}</span>
-              <button onClick={() => setSuccess('')} className="opacity-50 hover:opacity-100">&times;</button>
+          {(error || success) && (
+            <div className={`mt-4 px-5 py-3 rounded-xl border flex justify-between items-center ${error ? 'border-red-500/20 bg-red-500/5 text-red-400' : 'border-green-500/20 bg-green-500/5 text-green-400'}`}>
+              <span className="text-xs">{error || success}</span>
+              <button onClick={() => { setError(''); setSuccess(''); }} className="opacity-50 hover:opacity-100">&times;</button>
             </div>
           )}
         </div>
 
-        {/* Filter Bar */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12 fade-up fade-up-2">
           <div className="flex flex-wrap items-center justify-center gap-2">
             {PLATFORMS.map((p) => (
@@ -235,7 +250,6 @@ const Marketplace = () => {
           </select>
         </div>
 
-        {/* Bot Grid */}
         {loading ? (
           <div className="flex flex-col items-center justify-center py-32 opacity-40">
             <div className="w-12 h-12 border-2 border-[#ffd700]/30 border-t-[#ffd700] rounded-full animate-spin mb-4" />
@@ -249,9 +263,12 @@ const Marketplace = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 fade-up fade-up-3">
-            {listings.map((bot, idx) => (
-              <div key={bot.id} className="glass-card flex flex-col group">
-                {/* Visual Header */}
+            {listings.map((bot) => (
+              <div key={bot.id} className="glass-card flex flex-col group relative">
+                <div className="absolute top-4 left-4 z-10 px-3 py-1 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-bold uppercase tracking-widest text-[#ffd700]">
+                  {bot.platform}
+                </div>
+                
                 <div className="relative h-44 rounded-t-3xl overflow-hidden bg-white/[0.02]">
                   {bot.image_url ? (
                     <img src={bot.image_url} alt={bot.name} className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity duration-500" />
@@ -260,13 +277,8 @@ const Marketplace = () => {
                       {pIcons[bot.platform] || '🤖'}
                     </div>
                   )}
-                  {/* Platform Badge */}
-                  <div className="absolute top-4 left-4 px-3 py-1 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-bold uppercase tracking-widest text-[#ffd700]">
-                    {bot.platform}
-                  </div>
                 </div>
 
-                {/* Content */}
                 <div className="p-6 flex flex-col flex-1">
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="text-lg font-bold group-hover:text-[#ffd700] transition-colors">{bot.name}</h3>
@@ -282,7 +294,6 @@ const Marketplace = () => {
                     </p>
                   )}
 
-                  {/* Features / Category */}
                   <div className="flex flex-wrap gap-2 mb-6">
                     {bot.category && (
                       <span className="text-[9px] font-bold px-2 py-1 rounded-md bg-[#ffd700]/5 border border-[#ffd700]/10 text-[#ffd700]/70 uppercase">
@@ -296,7 +307,6 @@ const Marketplace = () => {
                     ))}
                   </div>
 
-                  {/* Actions */}
                   <div className="mt-auto pt-4 border-t border-white/[0.03] flex items-center gap-3">
                     <button
                       onClick={() => setSelectedBot(bot)}
@@ -304,13 +314,21 @@ const Marketplace = () => {
                     >
                       Dossier
                     </button>
-                    <button
-                      onClick={() => handlePurchase(bot.id)}
-                      disabled={purchasing === bot.id}
-                      className="flex-1 px-4 py-2.5 rounded-xl bg-[#ffd700] text-[#050505] text-[11px] font-black uppercase tracking-widest hover:bg-[#fff6a0] transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-                    >
-                      {purchasing === bot.id ? 'PENDING...' : 'Acquire'}
-                    </button>
+                    {purchasedBotIds.includes(bot.id) ? (
+                      <button
+                        onClick={() => handleViewResources(bot)}
+                        className="flex-1 px-4 py-2.5 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-[11px] font-black uppercase tracking-widest hover:bg-green-500/20 transition-all"
+                      >
+                        ✓ Resources
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handlePurchase(bot)}
+                        className="flex-1 px-4 py-2.5 rounded-xl bg-[#ffd700] text-[#050505] text-[11px] font-black uppercase tracking-widest hover:bg-[#fff6a0] transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                      >
+                        Acquire
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -323,7 +341,6 @@ const Marketplace = () => {
       {selectedBot && (
         <Modal onClose={() => setSelectedBot(null)} maxWidth="max-w-xl">
           <div className="relative">
-            {/* Modal Hero */}
             <div className="h-56 -mx-8 -mt-8 mb-6 relative bg-white/[0.02]">
               {selectedBot.image_url ? (
                 <img src={selectedBot.image_url} alt={selectedBot.name} className="w-full h-full object-cover opacity-60" />
@@ -374,32 +391,96 @@ const Marketplace = () => {
                     </div>
                   </div>
                 )}
-
-                <div className="flex items-center gap-6 pt-4 border-t border-white/5">
-                  <div>
-                    <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest mb-1">Grid Deployment</p>
-                    <p className="text-xs font-bold text-white/60">{selectedBot.total_sales || 0} active units</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest mb-1">Registration</p>
-                    <p className="text-xs font-bold text-white/60">{new Date(selectedBot.created_at).toLocaleDateString()}</p>
-                  </div>
-                </div>
               </div>
 
               <div className="flex items-center justify-between p-1.5 pl-6 rounded-2xl bg-[#ffd700]/5 border border-[#ffd700]/10">
                 <span className="text-2xl font-black text-[#ffd700] gold-glow">
                   {parseFloat(selectedBot.price) === 0 ? 'FREE' : `$${parseFloat(selectedBot.price).toFixed(2)}`}
                 </span>
-                <button
-                  onClick={() => handlePurchase(selectedBot.id)}
-                  disabled={purchasing === selectedBot.id}
-                  className="px-8 py-3.5 rounded-xl bg-[#ffd700] text-[#050505] text-[12px] font-black uppercase tracking-widest hover:bg-[#fff6a0] transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-                >
-                  {purchasing === selectedBot.id ? 'PROCESSING...' : 'INITIATE ACQUISITION'}
-                </button>
+                {purchasedBotIds.includes(selectedBot.id) ? (
+                  <button
+                    onClick={() => handleViewResources(selectedBot)}
+                    className="px-8 py-3.5 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-[12px] font-black uppercase tracking-widest hover:bg-green-500/20 transition-all"
+                  >
+                    View Resources
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handlePurchase(selectedBot)}
+                    className="px-8 py-3.5 rounded-xl bg-[#ffd700] text-[#050505] text-[12px] font-black uppercase tracking-widest hover:bg-[#fff6a0] transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    Initiate Acquisition
+                  </button>
+                )}
               </div>
             </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Checkout Modal */}
+      {checkoutModal.open && (
+        <DemoCheckoutModal
+          bot={checkoutModal.bot}
+          isOpen={checkoutModal.open}
+          onClose={() => setCheckoutModal({ open: false, bot: null })}
+          onSuccess={handleCheckoutSuccess}
+        />
+      )}
+
+      {/* Resource Modal */}
+      {resourceModal.open && (
+        <Modal onClose={() => setResourceModal({ open: false, bot: null, loading: false, resource: null })} maxWidth="max-w-2xl">
+          <div className="p-2">
+             <div className="flex items-center justify-between mb-8">
+               <h2 className="text-2xl font-bold tracking-tight">Intelligence <span className="text-[#ffd700]">Manifesto</span></h2>
+               <button onClick={() => setResourceModal({ open: false, bot: null, loading: false, resource: null })}
+                 className="text-2xl text-white/30 hover:text-white">&times;</button>
+             </div>
+
+             {resourceModal.loading ? (
+               <div className="py-20 text-center opacity-30">
+                  <div className="w-8 h-8 border-2 border-[#ffd700]/30 border-t-[#ffd700] rounded-full animate-spin mx-auto mb-4" />
+                  <p className="text-[10px] font-bold uppercase tracking-widest">Decentralising Assets...</p>
+               </div>
+             ) : resourceModal.resource ? (
+               <div className="space-y-8">
+                  {resourceModal.resource.bot_script && (
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-end">
+                        <h4 className="text-[10px] font-bold text-[#ffd700] uppercase tracking-widest opacity-60">Neural Script</h4>
+                        <button onClick={() => { navigator.clipboard.writeText(resourceModal.resource.bot_script); setSuccess('Copied to clipboard'); setTimeout(() => setSuccess(''), 2000); }}
+                          className="text-[9px] font-bold text-white/20 hover:text-white uppercase tracking-widest transition-colors">Copy to Clipboard</button>
+                      </div>
+                      <div className="bg-black/40 border border-white/5 rounded-xl p-5 font-mono text-[11px] text-white/60 overflow-auto max-h-64 custom-scrollbar">
+                        <pre>{resourceModal.resource.bot_script}</pre>
+                      </div>
+                    </div>
+                  )}
+
+                  {resourceModal.resource.github_link && (
+                    <div className="p-6 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between group">
+                       <div>
+                         <h4 className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-1">Source Registry</h4>
+                         <p className="text-xs font-bold text-[#ffd700]">{resourceModal.resource.github_link}</p>
+                       </div>
+                       <a href={resourceModal.resource.github_link} target="_blank" rel="noopener noreferrer"
+                        className="px-6 py-2 rounded-xl bg-white/10 text-[10px] font-bold uppercase tracking-widest group-hover:bg-[#ffd700] group-hover:text-[#050505] transition-all">Explore Grid</a>
+                    </div>
+                  )}
+
+                  {resourceModal.resource.config_json && (
+                    <div className="space-y-3">
+                      <h4 className="text-[10px] font-bold text-[#ffd700] uppercase tracking-widest opacity-60">Architectural Parameters</h4>
+                      <div className="bg-black/40 border border-white/5 rounded-xl p-5 font-mono text-[11px] text-white/40 overflow-auto max-h-48 custom-scrollbar">
+                        <pre>{JSON.stringify(resourceModal.resource.config_json, null, 2)}</pre>
+                      </div>
+                    </div>
+                  )}
+               </div>
+             ) : (
+               <p className="text-white/20 text-center py-10 italic text-sm">Failed to retrieve neural assets from the grid.</p>
+             )}
           </div>
         </Modal>
       )}

@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import PrivateRoute from './components/PrivateRoute';
+import { LanguageProvider } from './context/LanguageContext';
 import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -9,8 +10,11 @@ import AdminDashboard from './pages/AdminDashboard';
 import SellerDashboard from './pages/SellerDashboard';
 import BuyerDashboard from './pages/BuyerDashboard';
 import EmailBot from './pages/EmailBot';
+import EmailForwarding from './pages/EmailForwarding';
 import WhatsAppCampaign from './pages/WhatsAppCampaign';
+import BotCreationPage from './pages/BotCreationPage';
 import CreateMarketplaceBotPage from './pages/CreateMarketplaceBotPage';
+import FAQPage from './pages/FAQPage';
 import Unauthorized from './pages/Unauthorized';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
@@ -54,6 +58,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/marketplace" element={<Marketplace />} />
+          <Route path="/faq" element={<FAQPage />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
@@ -95,10 +100,26 @@ function App() {
             }
           />
           <Route
+            path="/email-forwarding"
+            element={
+              <PrivateRoute allowedRoles={[2]}>
+                <EmailForwarding />
+              </PrivateRoute>
+            }
+          />
+          <Route
             path="/whatsapp-bot"
             element={
               <PrivateRoute allowedRoles={[1, 2, 3]}>
                 <WhatsAppCampaign />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/bot-creation"
+            element={
+              <PrivateRoute allowedRoles={[2]}>
+                <BotCreationPage />
               </PrivateRoute>
             }
           />

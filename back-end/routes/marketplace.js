@@ -156,7 +156,7 @@ router.post('/create', verifyToken, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Only sellers can create marketplace listings.' });
     }
 
-    const { name, description, platform, price, features, category, image_url } = req.body;
+    const { name, description, platform, price, features, category, image_url, bot_script, github_link, config_json } = req.body;
 
     if (!name || !platform || price === undefined) {
       return res.status(400).json({ success: false, message: 'Name, platform, and price are required.' });
@@ -174,6 +174,7 @@ router.post('/create', verifyToken, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Price cannot be negative.' });
     }
 
+    // Create the marketplace bot listing
     const { data, error } = await supabase
       .from('marketplace_bots')
       .insert({
@@ -185,6 +186,9 @@ router.post('/create', verifyToken, async (req, res) => {
         features: features || [],
         category: category?.trim() || null,
         image_url: image_url?.trim() || null,
+        bot_script: bot_script || null,
+        github_link: github_link || null,
+        config_json: config_json || {},
         status: 'draft',
       })
       .select()
@@ -192,7 +196,36 @@ router.post('/create', verifyToken, async (req, res) => {
 
     if (error) {
       console.error('Create marketplace bot error:', error);
+      
+      // Check if it's a missing column error
+      if (error.message?.includes('bot_script') || error.message?.includes('github_link') || error.message?.includes('config_json')) {
+        return res.status(500).json({
+          success: false,
+          message: 'Database schema is not up to date. Please run the bot-creation migration SQL.',
+          error: 'MIGRATION_REQUIRED',
+          setupLink: 'Run: node setup-migrations.mjs',
+        });
+      }
+
       return res.status(500).json({ success: false, message: 'Failed to create listing.' });
+    }
+
+    // If bot_script is provided, store it in bot_scripts table for versioning
+    if (bot_script) {
+      try {
+        await supabase
+          .from('bot_scripts')
+          .insert({
+            bot_id: data.id,
+            creator_id: req.user.user_id,
+            script_content: bot_script,
+            version: 1,
+            is_current: true,
+          });
+      } catch (scriptErr) {
+        console.warn('Warning: Failed to store bot script:', scriptErr);
+        // Don't fail the listing creation if script storage fails
+      }
     }
 
     res.status(201).json({ success: true, message: 'Listing created successfully.', bot: data });
@@ -227,6 +260,33 @@ router.get('/my-listings', verifyToken, async (req, res) => {
   }
 });
 
+// GET /my-listing/:id - Seller gets a single listing for editing
+router.get('/my-listing/:id', verifyToken, async (req, res) => {
+  try {
+    if (req.user.role_id !== 2) {
+      return res.status(403).json({ success: false, message: 'Only sellers can view their listings.' });
+    }
+
+    const { id } = req.params;
+
+    const { data, error } = await supabase
+      .from('marketplace_bots')
+      .select('*')
+      .eq('id', id)
+      .eq('seller_id', req.user.user_id)
+      .single();
+
+    if (error || !data) {
+      return res.status(404).json({ success: false, message: 'Listing not found.' });
+    }
+
+    res.json({ success: true, listing: data });
+  } catch (err) {
+    console.error('Fetch my listing error:', err);
+    res.status(500).json({ success: false, message: 'Server error.' });
+  }
+});
+
 // PUT /update/:id - Seller updates their listing
 router.put('/update/:id', verifyToken, async (req, res) => {
   try {
@@ -235,7 +295,7 @@ router.put('/update/:id', verifyToken, async (req, res) => {
     }
 
     const { id } = req.params;
-    const { name, description, platform, price, features, category, image_url, status } = req.body;
+    const { name, description, platform, price, features, category, image_url, status, bot_script, github_link, config_json } = req.body;
 
     // Verify ownership
     const { data: existing, error: fetchErr } = await supabase
@@ -283,6 +343,9 @@ router.put('/update/:id', verifyToken, async (req, res) => {
     if (category !== undefined) updateData.category = category?.trim() || null;
     if (image_url !== undefined) updateData.image_url = image_url?.trim() || null;
     if (status) updateData.status = status;
+    if (bot_script !== undefined) updateData.bot_script = bot_script || null;
+    if (github_link !== undefined) updateData.github_link = github_link || null;
+    if (config_json !== undefined) updateData.config_json = config_json || {};
 
     const { data, error } = await supabase
       .from('marketplace_bots')
@@ -294,6 +357,30 @@ router.put('/update/:id', verifyToken, async (req, res) => {
     if (error) {
       console.error('Update listing error:', error);
       return res.status(500).json({ success: false, message: 'Failed to update listing.' });
+    }
+
+    // If bot_script is provided, update script version
+    if (bot_script) {
+      try {
+        // Mark old scripts as not current
+        await supabase
+          .from('bot_scripts')
+          .update({ is_current: false })
+          .eq('bot_id', id);
+
+        // Insert new script version
+        await supabase
+          .from('bot_scripts')
+          .insert({
+            bot_id: id,
+            creator_id: req.user.user_id,
+            script_content: bot_script,
+            version: 2,
+            is_current: true,
+          });
+      } catch (scriptErr) {
+        console.warn('Warning: Failed to update bot script version:', scriptErr);
+      }
     }
 
     res.json({ success: true, message: 'Listing updated successfully.', bot: data });
@@ -577,6 +664,70 @@ router.get(['/my-purchases', '/purchase-history'], verifyToken, async (req, res)
     });
   } catch (err) {
     console.error('Fetch purchases error:', err);
+    res.status(500).json({ success: false, message: 'Server error.' });
+  }
+});
+
+// GET /bot/:id/access - Buyer gets bot script and GitHub link (only if purchased)
+router.get('/bot/:id/access', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check if user is a buyer
+    if (req.user.role_id !== 3) {
+      return res.status(403).json({ success: false, message: 'Only buyers can access bot resources.' });
+    }
+
+    // Check if user has purchased this bot
+    const { data: purchase, error: purchaseError } = await supabase
+      .from('purchases')
+      .select('id')
+      .eq('buyer_id', req.user.user_id)
+      .eq('marketplace_bot_id', id)
+      .single();
+
+    if (purchaseError || !purchase) {
+      return res.status(403).json({ success: false, message: 'You must purchase this bot first to access its resources.' });
+    }
+
+    // Get the bot script and GitHub link
+    const { data: bot, error: botError } = await supabase
+      .from('marketplace_bots')
+      .select('id, name, platform, bot_script, github_link, config_json')
+      .eq('id', id)
+      .single();
+
+    if (botError || !bot) {
+      return res.status(404).json({ success: false, message: 'Bot not found.' });
+    }
+
+    // Log access for audit trail
+    try {
+      await supabase
+        .from('bot_access_logs')
+        .insert({
+          bot_id: id,
+          user_id: req.user.user_id,
+          access_type: 'script_access',
+          accessed_at: new Date().toISOString(),
+        });
+    } catch (logErr) {
+      console.warn('Warning: Failed to log bot access:', logErr);
+    }
+
+    res.json({
+      success: true,
+      bot: {
+        id: bot.id,
+        name: bot.name,
+        platform: bot.platform,
+        bot_script: bot.bot_script,
+        github_link: bot.github_link,
+        config_json: bot.config_json,
+      },
+    });
+  } catch (err) {
+    console.error('Get bot access error:', err);
     res.status(500).json({ success: false, message: 'Server error.' });
   }
 });

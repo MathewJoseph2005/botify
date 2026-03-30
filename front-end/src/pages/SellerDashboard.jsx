@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import BotTable from '../components/BotTable';
 import ConfirmModal from '../components/ConfirmModal';
 import FluidOrb from '../components/FluidOrb';
+import SellerWalletDashboard from '../components/SellerWalletDashboard';
 
 /* ── Starfield (reused) ── */
 const Starfield = memo(() => {
@@ -52,6 +53,7 @@ const SellerDashboard = () => {
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState('bots'); // bots or wallet
 
   const [deleteModal, setDeleteModal] = useState({ open: false, botId: null });
 
@@ -128,6 +130,18 @@ const SellerDashboard = () => {
           <p className="text-white/40 text-[14px]">Welcome back, <span className="text-white/80 font-medium">{user?.name}</span>. Manage your high-performance bots and revenue.</p>
         </div>
 
+        {/* Tabs */}
+        <div className="flex gap-1 mb-10 p-1 rounded-2xl bg-white/5 w-fit fade-up" style={{ border: '1px solid rgba(255,255,255,0.05)' }}>
+          <button onClick={() => setActiveTab('bots')}
+            className={`px-8 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${activeTab === 'bots' ? 'bg-[#ffd700] text-[#050505]' : 'text-white/40 hover:text-white hover:bg-white/5'}`}>
+            My Bots
+          </button>
+          <button onClick={() => setActiveTab('wallet')}
+            className={`px-8 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${activeTab === 'wallet' ? 'bg-[#ffd700] text-[#050505]' : 'text-white/40 hover:text-white hover:bg-white/5'}`}>
+            Wallet & Earnings
+          </button>
+        </div>
+
         {error && (
           <div className="mb-8 px-5 py-4 rounded-2xl glass-card border-red-500/20 bg-red-500/5 text-red-400 text-sm flex items-center justify-between fade-up">
             <span>{error}</span>
@@ -135,70 +149,92 @@ const SellerDashboard = () => {
           </div>
         )}
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-10">
-          {[
-            { label: 'Bots', value: bots.length, color: '#ffd700', icon: '✉️' },
-            { label: 'Active', value: activeBots, color: '#4ade80', icon: '🟢' },
-            { label: 'Listings', value: listings.length, color: '#a78bfa', icon: '🏬' },
-            { label: 'Published', value: publishedListings, color: '#2dd4bf', icon: '✅' },
-            { label: 'Sales', value: totalSales, color: '#ffd700', icon: '💰' }
-          ].map((stat, idx) => (
-            <div key={idx} className="glass-card p-5 fade-up" style={{ animationDelay: `${idx * 0.05}s` }}>
-              <div className="flex justify-between items-start mb-3">
-                <span className="text-[18px]">{stat.icon}</span>
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-white/30 truncate ml-2">{stat.label}</span>
+        {activeTab === 'bots' && (
+          <>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-10">
+              {[
+                { label: 'Bots', value: bots.length, color: '#ffd700', icon: '✉️' },
+                { label: 'Active', value: activeBots, color: '#4ade80', icon: '🟢' },
+                { label: 'Listings', value: listings.length, color: '#a78bfa', icon: '🏬' },
+                { label: 'Published', value: publishedListings, color: '#2dd4bf', icon: '✅' },
+                { label: 'Sales', value: totalSales, color: '#ffd700', icon: '💰' }
+              ].map((stat, idx) => (
+                <div key={idx} className="glass-card p-5 fade-up" style={{ animationDelay: `${idx * 0.05}s` }}>
+                  <div className="flex justify-between items-start mb-3">
+                    <span className="text-[18px]">{stat.icon}</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-white/30 truncate ml-2">{stat.label}</span>
+                  </div>
+                  <p className="text-2xl font-bold stat-glow" style={{ color: stat.color }}>{stat.value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Quick Actions */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-10 fade-up" style={{ animationDelay: '0.2s' }}>
+              <Link to="/email-bot" className="glass-card p-5 group flex items-center justify-between hover:border-[#ffd700]/40">
+                <div>
+                  <p className="text-[13px] font-bold mb-1">Email Bots</p>
+                  <p className="text-[11px] text-white/40">Control Panel</p>
+                </div>
+                <span className="transition-transform group-hover:translate-x-1">→</span>
+              </Link>
+              <Link to="/email-forwarding" className="glass-card p-5 group flex items-center justify-between hover:border-indigo-500/40">
+                <div>
+                  <p className="text-[13px] font-bold mb-1">Email Forwarding</p>
+                  <p className="text-[11px] text-white/40">Routing Bot</p>
+                </div>
+                <span className="transition-transform group-hover:translate-x-1 text-indigo-400">→</span>
+              </Link>
+              <Link to="/seller/create-bot" className="glass-card p-5 group flex items-center justify-between hover:border-[#ffd700]/40">
+                <div>
+                  <p className="text-[13px] font-bold mb-1">Manifest Agent</p>
+                  <p className="text-[11px] text-white/40">Launch Revenue</p>
+                </div>
+                <span className="transition-transform group-hover:translate-x-1">→</span>
+              </Link>
+              <button onClick={() => { fetchBots(); fetchListings(); }} className="glass-card p-5 group flex items-center justify-between hover:border-[#ffd700]/40">
+                <div>
+                  <p className="text-[13px] font-bold mb-1">Refresh Hub</p>
+                  <p className="text-[11px] text-white/40">Update All Data</p>
+                </div>
+                <span className="transition-transform group-hover:rotate-180 duration-500">↻</span>
+              </button>
+            </div>
+
+            {/* My Bots Table */}
+            <div className="glass-card overflow-hidden fade-up" style={{ animationDelay: '0.3s' }}>
+              <div className="px-6 py-5 border-b border-white/5 flex justify-between items-center">
+                <h2 className="text-sm font-semibold uppercase tracking-widest text-white/50">Deployment Portfolio</h2>
+                <div className="flex gap-3">
+                   <Link to="/email-forwarding" className="text-[10px] font-bold px-4 py-1.5 rounded-full border border-white/10 text-white/40 hover:text-white hover:bg-white/5 transition-all flex items-center gap-2">
+                     <span>📩</span> Forwarding
+                   </Link>
+                   <Link to="/email-bot" className="text-[10px] font-bold px-4 py-1.5 rounded-full bg-[#ffd700] text-[#050505] hover:scale-105 transition-all">
+                     + New Bot
+                   </Link>
+                </div>
               </div>
-              <p className="text-2xl font-bold stat-glow" style={{ color: stat.color }}>{stat.value}</p>
+              <div className="p-2">
+                <BotTable
+                  bots={bots}
+                  loading={loading}
+                  emptyMessage="Ready to scale? Create your first automation bot."
+                  emptyLinkText="Launch First Bot"
+                  emptyLinkTo="/email-bot"
+                  onDelete={handleDeleteBot}
+                  showManage={true}
+                />
+              </div>
             </div>
-          ))}
-        </div>
+          </>
+        )}
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10 fade-up" style={{ animationDelay: '0.2s' }}>
-          <Link to="/email-bot" className="glass-card p-5 group flex items-center justify-between hover:border-[#ffd700]/40">
-            <div>
-              <p className="text-[13px] font-bold mb-1">Manage Email Bots</p>
-              <p className="text-[11px] text-white/40">Automation control panel</p>
-            </div>
-            <span className="transition-transform group-hover:translate-x-1">→</span>
-          </Link>
-          <Link to="/seller/create-bot" className="glass-card p-5 group flex items-center justify-between hover:border-[#ffd700]/40">
-            <div>
-              <p className="text-[13px] font-bold mb-1">Create Marketplace Bot</p>
-              <p className="text-[11px] text-white/40">Launch new revenue streams</p>
-            </div>
-            <span className="transition-transform group-hover:translate-x-1">→</span>
-          </Link>
-          <button onClick={() => { fetchBots(); fetchListings(); }} className="glass-card p-5 group flex items-center justify-between hover:border-[#ffd700]/40">
-            <div>
-              <p className="text-[13px] font-bold mb-1">Refresh All</p>
-              <p className="text-[11px] text-white/40">Update listings & stats</p>
-            </div>
-            <span className="transition-transform group-hover:rotate-180 duration-500">↻</span>
-          </button>
-        </div>
-
-        {/* My Bots Table */}
-        <div className="glass-card overflow-hidden fade-up" style={{ animationDelay: '0.3s' }}>
-          <div className="px-6 py-5 border-b border-white/5 flex justify-between items-center">
-            <h2 className="text-sm font-semibold uppercase tracking-widest text-white/50">My Deployment Portfolio</h2>
-            <Link to="/email-bot" className="text-[11px] font-bold px-4 py-1.5 rounded-full bg-[#ffd700] text-[#050505] hover:scale-105 transition-all">
-              + New Creation
-            </Link>
+        {activeTab === 'wallet' && (
+          <div className="fade-up">
+            <SellerWalletDashboard />
           </div>
-          <div className="p-2">
-            <BotTable
-              bots={bots}
-              loading={loading}
-              emptyMessage="Ready to scale? Create your first automation bot."
-              emptyLinkText="Launch First Bot"
-              emptyLinkTo="/email-bot"
-              onDelete={handleDeleteBot}
-              showManage={true}
-            />
-          </div>
-        </div>
+        )}
       </div>
 
       <ConfirmModal
