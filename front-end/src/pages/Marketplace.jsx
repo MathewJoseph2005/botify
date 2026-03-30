@@ -1,19 +1,85 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { marketplaceAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import FluidOrb from '../components/FluidOrb';
+import Modal from '../components/Modal';
+
+/* ── Starfield (reused) ── */
+const Starfield = memo(() => {
+  const [stars] = useState(() =>
+    Array.from({ length: 120 }, (_, i) => ({
+      id: i, left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%`,
+      size: `${Math.random() * 1.8 + 0.4}px`, animDelay: `${Math.random() * 5}s`,
+      animDur: `${Math.random() * 4 + 2}s`, opacity: Math.random() * 0.4 + 0.3,
+    }))
+  );
+  return (
+    <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-50">
+      {stars.map(s => (
+        <div key={s.id} className="absolute bg-white rounded-full animate-twinkle"
+          style={{ left: s.left, top: s.top, width: s.size, height: s.size,
+            opacity: s.opacity, animationDelay: s.animDelay, animationDuration: s.animDur }} />
+      ))}
+    </div>
+  );
+});
+
+const MARKETPLACE_STYLES = `
+  @keyframes twinkle { 0%,100%{opacity:0.1;transform:scale(0.8)} 50%{opacity:1;transform:scale(1.1);box-shadow:0 0 8px 1px rgba(255,255,255,0.3)} }
+  .animate-twinkle{animation:twinkle ease-in-out infinite}
+  @keyframes fadeUp { from{opacity:0;transform:translateY(25px)} to{opacity:1;transform:translateY(0)} }
+  .fade-up{animation:fadeUp 0.8s cubic-bezier(.16,1,.3,1) both}
+  .fade-up-1{animation-delay:0.1s} .fade-up-2{animation-delay:0.2s} .fade-up-3{animation-delay:0.3s}
+  
+  .glass-card {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+  }
+  .glass-card:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 215, 0, 0.25);
+    transform: translateY(-6px);
+    box-shadow: 0 20px 40px -12px rgba(0,0,0,0.5);
+  }
+  .pill-filter {
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+    color: rgba(255,255,255,0.4);
+  }
+  .pill-filter:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.8); }
+  .pill-filter.active {
+    background: rgba(255,215,0,0.1);
+    border-color: rgba(255,215,0,0.4);
+    color: #ffd700;
+  }
+  .gold-glow { text-shadow: 0 0 15px rgba(255, 215, 0, 0.4); }
+  .input-glass {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: all 0.3s ease;
+  }
+  .input-glass:focus {
+    background: rgba(255,255,255,0.07);
+    border-color: rgba(255,215,0,0.4);
+    box-shadow: 0 0 0 3px rgba(255,215,0,0.1);
+  }
+`;
 
 const PLATFORMS = [
-  { value: '', label: 'All Platforms', icon: '🌐' },
+  { value: '', label: 'All', icon: '🌐' },
   { value: 'email', label: 'Email', icon: '📧' },
   { value: 'whatsapp', label: 'WhatsApp', icon: '💬' },
   { value: 'telegram', label: 'Telegram', icon: '✈️' },
   { value: 'discord', label: 'Discord', icon: '🎮' },
   { value: 'slack', label: 'Slack', icon: '💼' },
-  { value: 'instagram', label: 'Instagram', icon: '📸' },
 ];
 
 const SORT_OPTIONS = [
-  { value: 'newest', label: 'Newest' },
+  { value: 'newest', label: 'Newest Arrivals' },
   { value: 'popular', label: 'Most Popular' },
   { value: 'price_asc', label: 'Price: Low to High' },
   { value: 'price_desc', label: 'Price: High to Low' },
@@ -64,301 +130,279 @@ const Marketplace = () => {
 
   const handlePurchase = async (botId) => {
     if (!isAuthenticated) {
-      setError('Please log in to purchase bots.');
+      setError('Authorisation required. Please sign in as a Buyer.');
       return;
     }
     if (user?.role_id !== 3) {
-      setError('Only buyers can purchase bots. Please sign up as a buyer.');
+      setError('Action restricted. Only Buyer accounts can acquire bots.');
       return;
     }
-    if (!confirm('Are you sure you want to purchase this bot?')) return;
-
+    
     try {
       setPurchasing(botId);
       setError('');
       const res = await marketplaceAPI.purchase(botId);
       if (res.data.success) {
-        setSuccess('Bot purchased successfully! Check your Buyer Dashboard.');
+        setSuccess('Acquisition successful. Deployment initialised in your dashboard.');
         fetchListings();
         setSelectedBot(null);
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Purchase failed.');
+      setError(err.response?.data?.message || 'Transaction failed.');
     } finally {
       setPurchasing(null);
     }
   };
 
-  const getPlatformInfo = (val) => PLATFORMS.find((p) => p.value === val) || { label: val, icon: '🤖' };
-
-  const getPlatformColor = (val) => {
-    const colors = {
-      email: 'bg-blue-100 text-blue-700',
-      whatsapp: 'bg-green-100 text-green-700',
-      telegram: 'bg-sky-100 text-sky-700',
-      discord: 'bg-indigo-100 text-indigo-700',
-      slack: 'bg-purple-100 text-purple-700',
-      instagram: 'bg-pink-100 text-pink-700',
-    };
-    return colors[val] || 'bg-gray-100 text-gray-700';
-  };
+  const pIcons = { email: '📧', whatsapp: '💬', telegram: '✈️', discord: '🎮', slack: '💼' };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-800 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <h1 className="text-4xl font-bold mb-2">Bot Marketplace</h1>
-          <p className="text-primary-100 text-lg mb-6">
-            Discover powerful bots for every platform. Built by sellers, ready for you.
-          </p>
+    <div className="min-h-screen bg-[#050505] text-white relative overflow-hidden pb-32" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <style>{MARKETPLACE_STYLES}</style>
+      <Starfield />
 
-          {/* Search Bar */}
-          <form onSubmit={handleSearch} className="flex gap-2 max-w-2xl">
+      {/* Hero / Header Section */}
+      <div className="relative pt-20 pb-16 px-6 sm:px-12 max-w-7xl mx-auto z-10">
+        {/* Orbs */}
+        <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[800px] h-[600px] opacity-20 pointer-events-none">
+          <FluidOrb />
+        </div>
+
+        <div className="text-center mb-16 fade-up">
+          <p className="text-[#ffd700] text-[11px] font-bold uppercase tracking-[0.4em] mb-4">Autonomous Economy</p>
+          <h1 className="text-5xl md:text-6xl font-bold tracking-tighter mb-6">
+            Elite <span className="text-[#ffd700] gold-glow">Bot</span> Marketplace
+          </h1>
+          <p className="text-white/40 text-[15px] max-w-2xl mx-auto leading-relaxed">
+            Discover and acquire high-performance automated agents built for scale across global messaging protocols.
+          </p>
+        </div>
+
+        {/* Global Search & Alert */}
+        <div className="max-w-3xl mx-auto mb-12 fade-up fade-up-1">
+          <form onSubmit={handleSearch} className="relative group">
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search bots by name or description..."
-              className="flex-1 px-4 py-3 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-white focus:outline-none"
+              placeholder="Search by intelligence domain or protocol..."
+              className="w-full px-6 py-4 rounded-2xl input-glass outline-none text-[14px] placeholder-white/20 pr-32"
             />
             <button
               type="submit"
-              className="bg-white text-primary-700 px-6 py-3 rounded-lg font-medium hover:bg-primary-50 transition"
+              className="absolute right-2 top-2 bottom-2 px-6 rounded-xl bg-[#ffd700] text-[#050505] font-bold text-xs hover:scale-[1.03] transition-all"
             >
-              Search
+              SEARCH
             </button>
           </form>
+
+          {error && (
+            <div className="mt-4 px-5 py-3 rounded-xl border border-red-500/20 bg-red-500/5 text-red-400 text-xs flex justify-between items-center animate-shake">
+              <span>{error}</span>
+              <button onClick={() => setError('')} className="opacity-50 hover:opacity-100">&times;</button>
+            </div>
+          )}
+          {success && (
+            <div className="mt-4 px-5 py-3 rounded-xl border border-green-500/20 bg-green-500/5 text-green-400 text-xs flex justify-between items-center">
+              <span>{success}</span>
+              <button onClick={() => setSuccess('')} className="opacity-50 hover:opacity-100">&times;</button>
+            </div>
+          )}
         </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Alerts */}
-        {error && (
-          <div className="mb-6 px-4 py-3 rounded-lg border bg-red-50 border-red-200 text-red-700 flex justify-between items-center">
-            <span>{error}</span>
-            <button onClick={() => setError('')} className="ml-4 text-lg leading-none">&times;</button>
-          </div>
-        )}
-        {success && (
-          <div className="mb-6 px-4 py-3 rounded-lg border bg-green-50 border-green-200 text-green-700 flex justify-between items-center">
-            <span>{success}</span>
-            <button onClick={() => setSuccess('')} className="ml-4 text-lg leading-none">&times;</button>
-          </div>
-        )}
-
-        {/* Filters Row */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-8">
-          {/* Platform Filter Pills */}
-          <div className="flex flex-wrap gap-2 flex-1">
+        {/* Filter Bar */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12 fade-up fade-up-2">
+          <div className="flex flex-wrap items-center justify-center gap-2">
             {PLATFORMS.map((p) => (
               <button
                 key={p.value}
                 onClick={() => setPlatform(p.value)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition ${
-                  platform === p.value
-                    ? 'bg-primary-600 text-white'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:border-primary-400'
-                }`}
+                className={`pill-filter px-4 py-2 rounded-full text-[12px] font-bold uppercase tracking-wider flex items-center gap-2 ${platform === p.value ? 'active' : ''}`}
               >
-                <span className="mr-1">{p.icon}</span> {p.label}
+                <span>{p.icon}</span> {p.label}
               </button>
             ))}
           </div>
-
-          {/* Sort Select */}
+          
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-primary-500"
+            className="input-glass px-4 py-2 rounded-xl text-[12px] font-bold text-white/60 bg-transparent outline-none cursor-pointer"
           >
             {SORT_OPTIONS.map((s) => (
-              <option key={s.value} value={s.value}>{s.label}</option>
+              <option key={s.value} value={s.value} className="bg-[#111]">{s.label}</option>
             ))}
           </select>
         </div>
 
-        {/* Results Count */}
-        {!loading && (
-          <p className="text-sm text-gray-500 mb-4">
-            {listings.length} bot{listings.length !== 1 ? 's' : ''} found
-          </p>
-        )}
-
         {/* Bot Grid */}
         {loading ? (
-          <div className="text-center py-16">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-            <p className="text-gray-500">Loading marketplace...</p>
+          <div className="flex flex-col items-center justify-center py-32 opacity-40">
+            <div className="w-12 h-12 border-2 border-[#ffd700]/30 border-t-[#ffd700] rounded-full animate-spin mb-4" />
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em]">Synching Neural Grid</p>
           </div>
         ) : listings.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-lg shadow">
-            <div className="text-5xl mb-4">🔍</div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No bots found</h3>
-            <p className="text-gray-500">
-              {search || platform ? 'Try adjusting your filters or search query.' : 'No bots have been published yet. Check back soon!'}
-            </p>
+          <div className="glass-card p-20 text-center fade-up">
+            <div className="text-4xl mb-6 opacity-30">🔍</div>
+            <h3 className="text-xl font-bold mb-2">Network Search Negative</h3>
+            <p className="text-white/30 text-sm italic">Lower filter sensitivity or try a different frequency.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {listings.map((bot) => {
-              const pInfo = getPlatformInfo(bot.platform);
-              return (
-                <div
-                  key={bot.id}
-                  className="bg-white rounded-xl shadow-sm hover:shadow-md transition border border-gray-100 overflow-hidden flex flex-col"
-                >
-                  {/* Card Header / Image */}
-                  <div className="h-40 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center relative">
-                    {bot.image_url ? (
-                      <img
-                        src={bot.image_url}
-                        alt={bot.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => { e.target.style.display = 'none'; }}
-                      />
-                    ) : (
-                      <span className="text-6xl">{pInfo.icon}</span>
-                    )}
-                    <span className={`absolute top-3 right-3 px-2.5 py-1 text-xs font-semibold rounded-full ${getPlatformColor(bot.platform)}`}>
-                      {pInfo.label}
-                    </span>
-                  </div>
-
-                  {/* Card Body */}
-                  <div className="p-5 flex-1 flex flex-col">
-                    <h3 className="text-lg font-bold text-gray-900 mb-1">{bot.name}</h3>
-                    <p className="text-sm text-gray-500 mb-1">by {bot.seller_name}</p>
-                    {bot.description && (
-                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">{bot.description}</p>
-                    )}
-
-                    {/* Features */}
-                    {bot.features && bot.features.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-3">
-                        {bot.features.slice(0, 3).map((f, i) => (
-                          <span key={i} className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">
-                            {f}
-                          </span>
-                        ))}
-                        {bot.features.length > 3 && (
-                          <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-500 rounded">
-                            +{bot.features.length - 3} more
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Meta */}
-                    <div className="flex items-center gap-3 text-xs text-gray-500 mb-4 mt-auto">
-                      {bot.category && <span>{bot.category}</span>}
-                      <span>{bot.total_sales || 0} sales</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 fade-up fade-up-3">
+            {listings.map((bot, idx) => (
+              <div key={bot.id} className="glass-card flex flex-col group">
+                {/* Visual Header */}
+                <div className="relative h-44 rounded-t-3xl overflow-hidden bg-white/[0.02]">
+                  {bot.image_url ? (
+                    <img src={bot.image_url} alt={bot.name} className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity duration-500" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-6xl opacity-20 grayscale group-hover:scale-110 group-hover:opacity-40 transition-all duration-700">
+                      {pIcons[bot.platform] || '🤖'}
                     </div>
-
-                    {/* Price + Action */}
-                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                      <span className="text-2xl font-bold text-gray-900">
-                        {parseFloat(bot.price) === 0 ? 'Free' : `$${parseFloat(bot.price).toFixed(2)}`}
-                      </span>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setSelectedBot(selectedBot?.id === bot.id ? null : bot)}
-                          className="px-3 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
-                        >
-                          Details
-                        </button>
-                        <button
-                          onClick={() => handlePurchase(bot.id)}
-                          disabled={purchasing === bot.id}
-                          className="px-4 py-2 text-sm bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition font-medium disabled:opacity-50"
-                        >
-                          {purchasing === bot.id ? 'Buying...' : 'Buy Now'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Bot Detail Modal */}
-        {selectedBot && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setSelectedBot(null)}>
-            <div
-              className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Modal Header */}
-              <div className="h-48 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center relative rounded-t-2xl">
-                {selectedBot.image_url ? (
-                  <img src={selectedBot.image_url} alt={selectedBot.name} className="w-full h-full object-cover rounded-t-2xl" />
-                ) : (
-                  <span className="text-7xl">{getPlatformInfo(selectedBot.platform).icon}</span>
-                )}
-                <button
-                  onClick={() => setSelectedBot(null)}
-                  className="absolute top-3 right-3 bg-white/80 hover:bg-white rounded-full w-8 h-8 flex items-center justify-center text-gray-700 transition"
-                >
-                  &times;
-                </button>
-              </div>
-
-              <div className="p-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${getPlatformColor(selectedBot.platform)}`}>
-                    {getPlatformInfo(selectedBot.platform).label}
-                  </span>
-                  {selectedBot.category && (
-                    <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600">
-                      {selectedBot.category}
-                    </span>
                   )}
-                </div>
-
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">{selectedBot.name}</h2>
-                <p className="text-sm text-gray-500 mb-4">by {selectedBot.seller_name}</p>
-
-                {selectedBot.description && (
-                  <p className="text-gray-700 mb-4">{selectedBot.description}</p>
-                )}
-
-                {selectedBot.features && selectedBot.features.length > 0 && (
-                  <div className="mb-4">
-                    <h4 className="text-sm font-semibold text-gray-900 mb-2">Features</h4>
-                    <ul className="space-y-1">
-                      {selectedBot.features.map((f, i) => (
-                        <li key={i} className="flex items-center gap-2 text-sm text-gray-600">
-                          <span className="text-green-500">✓</span> {f}
-                        </li>
-                      ))}
-                    </ul>
+                  {/* Platform Badge */}
+                  <div className="absolute top-4 left-4 px-3 py-1 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-bold uppercase tracking-widest text-[#ffd700]">
+                    {bot.platform}
                   </div>
-                )}
-
-                <div className="flex items-center gap-4 text-sm text-gray-500 mb-6">
-                  <span>{selectedBot.total_sales || 0} sales</span>
-                  <span>Listed {new Date(selectedBot.created_at).toLocaleDateString()}</span>
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                  <span className="text-3xl font-bold text-gray-900">
-                    {parseFloat(selectedBot.price) === 0 ? 'Free' : `$${parseFloat(selectedBot.price).toFixed(2)}`}
-                  </span>
-                  <button
-                    onClick={() => handlePurchase(selectedBot.id)}
-                    disabled={purchasing === selectedBot.id}
-                    className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition font-medium disabled:opacity-50"
-                  >
-                    {purchasing === selectedBot.id ? 'Processing...' : 'Purchase Bot'}
-                  </button>
+                {/* Content */}
+                <div className="p-6 flex flex-col flex-1">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-lg font-bold group-hover:text-[#ffd700] transition-colors">{bot.name}</h3>
+                    <span className="text-[14px] font-black tracking-tight text-[#ffd700] gold-glow">
+                      {parseFloat(bot.price) === 0 ? 'FREE' : `$${parseFloat(bot.price).toFixed(2)}`}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-white/30 font-medium uppercase tracking-widest mb-4">by {bot.seller_name}</p>
+                  
+                  {bot.description && (
+                    <p className="text-[13px] text-white/50 mb-6 line-clamp-2 leading-relaxed italic">
+                      "{bot.description}"
+                    </p>
+                  )}
+
+                  {/* Features / Category */}
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {bot.category && (
+                      <span className="text-[9px] font-bold px-2 py-1 rounded-md bg-[#ffd700]/5 border border-[#ffd700]/10 text-[#ffd700]/70 uppercase">
+                        {bot.category}
+                      </span>
+                    )}
+                    {(bot.features || []).slice(0, 2).map((f, i) => (
+                      <span key={i} className="text-[9px] font-bold px-2 py-1 rounded-md bg-white/5 border border-white/5 text-white/30 uppercase">
+                        {f}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="mt-auto pt-4 border-t border-white/[0.03] flex items-center gap-3">
+                    <button
+                      onClick={() => setSelectedBot(bot)}
+                      className="flex-1 px-4 py-2.5 rounded-xl border border-white/10 text-[11px] font-bold uppercase tracking-widest hover:bg-white/5 transition-all active:scale-[0.98]"
+                    >
+                      Dossier
+                    </button>
+                    <button
+                      onClick={() => handlePurchase(bot.id)}
+                      disabled={purchasing === bot.id}
+                      className="flex-1 px-4 py-2.5 rounded-xl bg-[#ffd700] text-[#050505] text-[11px] font-black uppercase tracking-widest hover:bg-[#fff6a0] transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                    >
+                      {purchasing === bot.id ? 'PENDING...' : 'Acquire'}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
+            ))}
           </div>
         )}
       </div>
+
+      {/* Bot Detail Modal */}
+      {selectedBot && (
+        <Modal onClose={() => setSelectedBot(null)} maxWidth="max-w-xl">
+          <div className="relative">
+            {/* Modal Hero */}
+            <div className="h-56 -mx-8 -mt-8 mb-6 relative bg-white/[0.02]">
+              {selectedBot.image_url ? (
+                <img src={selectedBot.image_url} alt={selectedBot.name} className="w-full h-full object-cover opacity-60" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-7xl opacity-20">
+                  {pIcons[selectedBot.platform] || '🤖'}
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0f0f0f] to-transparent" />
+              <button 
+                onClick={() => setSelectedBot(null)}
+                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/50 border border-white/10 flex items-center justify-center text-white/60 hover:text-white transition-colors"
+              >
+                &times;
+              </button>
+              
+              <div className="absolute bottom-4 left-6 flex items-center gap-3">
+                <span className="px-3 py-1 rounded-lg bg-[#ffd700]/10 border border-[#ffd700]/30 text-[10px] font-bold text-[#ffd700] uppercase tracking-widest">
+                  {selectedBot.platform}
+                </span>
+                {selectedBot.category && (
+                  <span className="px-3 py-1 rounded-lg bg-white/5 border border-white/10 text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                    {selectedBot.category}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="px-2">
+              <h2 className="text-3xl font-bold tracking-tight mb-2 text-white/95">{selectedBot.name}</h2>
+              <p className="text-[11px] font-bold uppercase tracking-[0.34em] text-white/20 mb-6">Designed by {selectedBot.seller_name}</p>
+              
+              <div className="space-y-6 mb-8">
+                <div>
+                  <h4 className="text-[10px] font-bold text-[#ffd700] uppercase tracking-widest mb-2 opacity-60">Architectural Summary</h4>
+                  <p className="text-sm text-white/50 leading-relaxed italic">"{selectedBot.description || 'No detailed dossier available for this unit.'}"</p>
+                </div>
+
+                {selectedBot.features && selectedBot.features.length > 0 && (
+                  <div>
+                    <h4 className="text-[10px] font-bold text-[#ffd700] uppercase tracking-widest mb-3 opacity-60">System Capabilities</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      {selectedBot.features.map((f, i) => (
+                        <div key={i} className="flex items-center gap-3 text-xs text-white/40 group">
+                          <span className="text-[#ffd700] opacity-40 group-hover:opacity-100 transition-opacity">◎</span> {f}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-6 pt-4 border-t border-white/5">
+                  <div>
+                    <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest mb-1">Grid Deployment</p>
+                    <p className="text-xs font-bold text-white/60">{selectedBot.total_sales || 0} active units</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest mb-1">Registration</p>
+                    <p className="text-xs font-bold text-white/60">{new Date(selectedBot.created_at).toLocaleDateString()}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-1.5 pl-6 rounded-2xl bg-[#ffd700]/5 border border-[#ffd700]/10">
+                <span className="text-2xl font-black text-[#ffd700] gold-glow">
+                  {parseFloat(selectedBot.price) === 0 ? 'FREE' : `$${parseFloat(selectedBot.price).toFixed(2)}`}
+                </span>
+                <button
+                  onClick={() => handlePurchase(selectedBot.id)}
+                  disabled={purchasing === selectedBot.id}
+                  className="px-8 py-3.5 rounded-xl bg-[#ffd700] text-[#050505] text-[12px] font-black uppercase tracking-widest hover:bg-[#fff6a0] transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                >
+                  {purchasing === selectedBot.id ? 'PROCESSING...' : 'INITIATE ACQUISITION'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

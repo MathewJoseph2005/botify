@@ -5,6 +5,7 @@ import { authAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import RoleSelectModal from '../components/RoleSelectModal';
 import FluidOrb from '../components/FluidOrb';
+import Logo from '../components/Logo';
 
 /* ─────────────── Starfield (matches landing page exactly) ─────────────── */
 const Starfield = memo(() => {
@@ -453,9 +454,9 @@ const Login = () => {
           {/* Branding below orb */}
           <div className="absolute bottom-16 left-0 right-0 text-center px-12">
             <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-white/25 mb-3">Powered by</p>
-            <h2 className="text-3xl font-bold tracking-tight mb-3">
-              <span className="text-[#ffd700]">Botify</span>
-            </h2>
+            <div className="flex justify-center mb-4">
+              <Logo size="lg" />
+            </div>
             <p className="text-[13px] text-white/35 leading-relaxed max-w-xs mx-auto">
               The next-generation bot marketplace for WhatsApp, Telegram &amp; Discord.
             </p>

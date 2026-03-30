@@ -2,6 +2,7 @@ import { useState, memo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authAPI } from '../utils/api';
 import FluidOrb from '../components/FluidOrb';
+import Logo from '../components/Logo';
 
 /* ─── Starfield ─── */
 const Starfield = memo(() => {
@@ -315,9 +316,9 @@ const Signup = () => {
           {/* Branding */}
           <div className="absolute bottom-16 left-0 right-0 text-center px-12">
             <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-white/25 mb-3">Join</p>
-            <h2 className="text-3xl font-bold tracking-tight mb-3">
-              <span className="text-[#ffd700]">Botify</span>
-            </h2>
+            <div className="flex justify-center mb-4">
+              <Logo size="lg" />
+            </div>
             <p className="text-[13px] text-white/35 leading-relaxed max-w-xs mx-auto">
               Deploy bots across WhatsApp, Telegram &amp; Discord — all from one marketplace.
             </p>

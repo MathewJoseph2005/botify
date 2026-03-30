@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Logo from './Logo';
 
 /* ── inline keyframes so the navbar needs zero extra CSS files ────────────── */
 const NAV_STYLES = `
@@ -140,6 +141,8 @@ const Navbar = () => {
     setUserMenuOpen(false);
   }, [location.pathname]);
 
+  if (location.pathname === '/') return null;
+
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + '/');
 
   const handleLogout = () => {
@@ -163,16 +166,8 @@ const Navbar = () => {
           <div className="flex items-center justify-between h-[60px]">
 
             {/* ── LOGO ────────────────────────────────────────────────── */}
-            <Link to="/" className="flex items-center gap-2 group" onClick={() => setMobileOpen(false)}>
-              {/* orb dot */}
-              <div
-                className="w-7 h-7 rounded-full flex-shrink-0"
-                style={{
-                  background: 'radial-gradient(circle at 35% 35%, #ffe066, #ffd700 55%, #b8860b)',
-                  boxShadow: '0 0 14px rgba(255,215,0,0.5)',
-                }}
-              />
-              <span className="text-xl font-bold logo-shimmer tracking-tight">Botify</span>
+            <Link to="/" onClick={() => setMobileOpen(false)}>
+              <Logo size="md" />
             </Link>
 
             {/* ── DESKTOP NAV LINKS ───────────────────────────────────── */}

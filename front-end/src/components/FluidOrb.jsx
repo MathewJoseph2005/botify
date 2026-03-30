@@ -16,7 +16,7 @@ function OrbMesh() {
     <mesh ref={meshRef} position={[0, -1, 0]}>
       <sphereGeometry args={[2.5, 90, 64]} />
       <MeshDistortMaterial
-        color="#2e2d2dff"
+        color="#2e2d2d"
         envMapIntensity={2.5}
         clearcoat={1}
         clearcoatRoughness={0.1}
@@ -37,9 +37,9 @@ export default function FluidOrb() {
     <div className="absolute inset-0 z-0 pointer-events-none flex items-center justify-center">
       <Canvas camera={{ position: [0, 0, 8], fov: 45 }}>
         <ambientLight intensity={0.5} />
-        <directionalLight position={[10, 10, 5]} intensity={2.5} color="#000000ff" />
-        <directionalLight position={[-10, 10, -5]} intensity={2} color="#5c2062ff" />
-        <directionalLight position={[0, -10, 5]} intensity={1.5} color="#30272dff" />
+        <directionalLight position={[10, 10, 5]} intensity={2.5} color="#000000" />
+        <directionalLight position={[-10, 10, -5]} intensity={2} color="#5c2062" />
+        <directionalLight position={[0, -10, 5]} intensity={1.5} color="#30272d" />
         <OrbMesh />
         <Environment preset="night" />
       </Canvas>

@@ -1,27 +1,72 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { marketplaceAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import FluidOrb from '../components/FluidOrb';
+import ConfirmModal from '../components/ConfirmModal';
+
+/* ── Starfield (Reused) ── */
+const Starfield = memo(() => {
+  const [stars] = useState(() =>
+    Array.from({ length: 110 }, (_, i) => ({
+      id: i, left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%`,
+      size: `${Math.random() * 1.8 + 0.4}px`, animDelay: `${Math.random() * 5}s`,
+      animDur: `${Math.random() * 4 + 2}s`, opacity: Math.random() * 0.4 + 0.3,
+    }))
+  );
+  return (
+    <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-50">
+      {stars.map(s => (
+        <div key={s.id} className="absolute bg-white rounded-full animate-twinkle"
+          style={{ left: s.left, top: s.top, width: s.size, height: s.size,
+            opacity: s.opacity, animationDelay: s.animDelay, animationDuration: s.animDur }} />
+      ))}
+    </div>
+  );
+});
+
+const CREATE_STYLES = `
+  @keyframes twinkle { 0%,100%{opacity:0.1;transform:scale(0.8)} 50%{opacity:1;transform:scale(1.1);box-shadow:0 0 8px 1px rgba(255,255,255,0.3)} }
+  .animate-twinkle{animation:twinkle ease-in-out infinite}
+  @keyframes fadeUp { from{opacity:0;transform:translateY(25px)} to{opacity:1;transform:translateY(0)} }
+  .fade-up{animation:fadeUp 0.8s cubic-bezier(.16,1,.3,1) both}
+  .glass-card {
+    background: rgba(255, 255, 255, 0.035);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    transition: all 0.4s ease;
+  }
+  .glass-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 215, 0, 0.2);
+  }
+  .input-glass {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    transition: all 0.3s ease;
+    color: white;
+  }
+  .input-glass:focus {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,215,0,0.4);
+    box-shadow: 0 0 0 4px rgba(255,215,0,0.05);
+  }
+  .gold-glow { text-shadow: 0 0 15px rgba(255, 215, 0, 0.3); }
+`;
 
 const PLATFORMS = [
-  { value: 'email', label: 'Email', icon: '📧', color: 'bg-blue-100 text-blue-700' },
-  { value: 'whatsapp', label: 'WhatsApp', icon: '💬', color: 'bg-green-100 text-green-700' },
-  { value: 'telegram', label: 'Telegram', icon: '✈️', color: 'bg-sky-100 text-sky-700' },
-  { value: 'discord', label: 'Discord', icon: '🎮', color: 'bg-indigo-100 text-indigo-700' },
-  { value: 'slack', label: 'Slack', icon: '💼', color: 'bg-purple-100 text-purple-700' },
-  { value: 'instagram', label: 'Instagram', icon: '📸', color: 'bg-pink-100 text-pink-700' },
+  { value: 'email', label: 'Email', icon: '📧' },
+  { value: 'whatsapp', label: 'WhatsApp', icon: '💬' },
+  { value: 'telegram', label: 'Telegram', icon: '✈️' },
+  { value: 'discord', label: 'Discord', icon: '🎮' },
+  { value: 'slack', label: 'Slack', icon: '💼' },
+  { value: 'instagram', label: 'Instagram', icon: '📸' },
 ];
 
 const CATEGORIES = [
-  'Customer Support',
-  'Marketing',
-  'Sales',
-  'Notifications',
-  'Analytics',
-  'Automation',
-  'Social Media',
-  'E-commerce',
-  'Other',
+  'Customer Support', 'Marketing', 'Sales', 'Notifications', 
+  'Analytics', 'Automation', 'Social Media', 'E-commerce', 'Other'
 ];
 
 const CreateMarketplaceBotPage = () => {
@@ -33,6 +78,7 @@ const CreateMarketplaceBotPage = () => {
   const [success, setSuccess] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [deleteModal, setDeleteModal] = useState({ open: false, id: null });
 
   const [form, setForm] = useState({
     name: '',
@@ -74,7 +120,7 @@ const CreateMarketplaceBotPage = () => {
     setSuccess('');
 
     if (!form.name || !form.platform || !form.price) {
-      setError('Name, platform, and price are required.');
+      setError('Bot name, target protocol, and unit price are mandatory.');
       return;
     }
 
@@ -94,19 +140,15 @@ const CreateMarketplaceBotPage = () => {
       setSubmitting(true);
       if (editingId) {
         const res = await marketplaceAPI.updateListing(editingId, payload);
-        if (res.data.success) {
-          setSuccess('Listing updated successfully!');
-        }
+        if (res.data.success) setSuccess('Agent manifesto updated successfully.');
       } else {
         const res = await marketplaceAPI.createListing(payload);
-        if (res.data.success) {
-          setSuccess('Listing created successfully!');
-        }
+        if (res.data.success) setSuccess('New autonomous agent initialised.');
       }
       resetForm();
       fetchListings();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save listing.');
+      setError(err.response?.data?.message || 'System transmission error.');
     } finally {
       setSubmitting(false);
     }
@@ -124,21 +166,20 @@ const CreateMarketplaceBotPage = () => {
     });
     setEditingId(listing.id);
     setShowForm(true);
-    setError('');
-    setSuccess('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this listing?')) return;
+  const confirmDelete = async () => {
     try {
-      const res = await marketplaceAPI.deleteListing(id);
+      const res = await marketplaceAPI.deleteListing(deleteModal.id);
       if (res.data.success) {
-        setSuccess('Listing deleted.');
+        setSuccess('Listing purged from registry.');
         fetchListings();
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete listing.');
+      setError(err.response?.data?.message || 'Purge failed.');
+    } finally {
+      setDeleteModal({ open: false, id: null });
     }
   };
 
@@ -147,316 +188,237 @@ const CreateMarketplaceBotPage = () => {
       const publish = currentStatus !== 'published';
       const res = await marketplaceAPI.publishListing(id, publish);
       if (res.data.success) {
-        setSuccess(publish ? 'Bot published to marketplace!' : 'Bot unpublished.');
+        setSuccess(publish ? 'Agent deployed to global grid.' : 'Agent recalled to barracks.');
         fetchListings();
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update status.');
+      setError(err.response?.data?.message || 'Status transition error.');
     }
   };
 
-  const getPlatformInfo = (val) => PLATFORMS.find((p) => p.value === val) || { label: val, icon: '🤖', color: 'bg-gray-100 text-gray-700' };
-
   const publishedCount = listings.filter((l) => l.status === 'published').length;
-  const draftCount = listings.filter((l) => l.status === 'draft').length;
   const totalSales = listings.reduce((sum, l) => sum + (l.total_sales || 0), 0);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-[#050505] text-white relative overflow-hidden pb-32" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <style>{CREATE_STYLES}</style>
+      <Starfield />
+
+      <div className="max-w-7xl mx-auto px-6 lg:px-12 pt-16 relative z-10">
+        {/* Orbs */}
+        <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] opacity-10 pointer-events-none">
+          <FluidOrb />
+        </div>
+
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 fade-up">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">My Marketplace Listings</h1>
-            <p className="text-gray-600 mt-1">Create and manage bots for the marketplace</p>
+            <h1 className="text-4xl font-bold tracking-tight mb-2">Manifest <span className="text-[#ffd700] gold-glow">Agent</span></h1>
+            <p className="text-white/30 text-sm font-medium uppercase tracking-[0.2em]">Scale your automation empire</p>
           </div>
           <button
-            onClick={() => { setShowForm(!showForm); setEditingId(null); setError(''); setSuccess(''); }}
-            className="mt-4 sm:mt-0 bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg transition font-medium"
+            onClick={() => { setShowForm(!showForm); setEditingId(null); }}
+            className={`px-8 py-3 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all
+              ${showForm ? 'bg-white/5 border border-white/10 text-white/40 hover:text-white' : 'bg-[#ffd700] text-[#050505] hover:scale-105'}
+            `}
           >
-            {showForm ? 'Cancel' : '+ Create New Bot'}
+            {showForm ? 'Abort' : 'Initialise New Agent'}
           </button>
         </div>
 
         {/* Alerts */}
-        {error && (
-          <div className="mb-6 px-4 py-3 rounded-lg border bg-red-50 border-red-200 text-red-700 flex justify-between items-center">
-            <span>{error}</span>
-            <button onClick={() => setError('')} className="ml-4 text-lg leading-none">&times;</button>
-          </div>
-        )}
-        {success && (
-          <div className="mb-6 px-4 py-3 rounded-lg border bg-green-50 border-green-200 text-green-700 flex justify-between items-center">
-            <span>{success}</span>
-            <button onClick={() => setSuccess('')} className="ml-4 text-lg leading-none">&times;</button>
+        {(error || success) && (
+          <div className={`mb-8 px-6 py-4 rounded-2xl glass-card flex items-center justify-between fade-up ${error ? 'border-red-500/20 bg-red-500/5 text-red-400' : 'border-green-500/20 bg-green-500/5 text-green-400'}`}>
+            <span className="text-sm font-medium">{error || success}</span>
+            <button onClick={() => { setError(''); setSuccess(''); }} className="opacity-50 hover:opacity-100">&times;</button>
           </div>
         )}
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-lg shadow p-5">
-            <p className="text-sm text-gray-500">Total Listings</p>
-            <p className="text-2xl font-bold text-gray-900">{listings.length}</p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-5">
-            <p className="text-sm text-gray-500">Published</p>
-            <p className="text-2xl font-bold text-green-600">{publishedCount}</p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-5">
-            <p className="text-sm text-gray-500">Drafts</p>
-            <p className="text-2xl font-bold text-yellow-600">{draftCount}</p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-5">
-            <p className="text-sm text-gray-500">Total Sales</p>
-            <p className="text-2xl font-bold text-primary-600">{totalSales}</p>
-          </div>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12 fade-up" style={{ animationDelay: '0.1s' }}>
+          {[
+            { label: 'Registry Size', value: listings.length, color: 'text-white/60' },
+            { label: 'Deployed Agents', value: publishedCount, color: 'text-green-400' },
+            { label: 'Draft Prototypes', value: listings.length - publishedCount, color: 'text-white/20' },
+            { label: 'Network Revenue', value: totalSales, color: 'text-[#ffd700]' }
+          ].map((s, idx) => (
+            <div key={idx} className="glass-card p-6">
+              <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-2">{s.label}</p>
+              <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
+            </div>
+          ))}
         </div>
 
-        {/* Create / Edit Form */}
+        {/* Form */}
         {showForm && (
-          <div className="bg-white rounded-lg shadow mb-8">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">
-                {editingId ? 'Edit Bot Listing' : 'Create New Bot Listing'}
-              </h2>
-            </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
-              {/* Bot Name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Bot Name *</label>
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="e.g. SmartMailer Pro"
-                  required
-                />
-              </div>
+          <div className="glass-card p-8 mb-12 fade-up" style={{ animationDelay: '0.2s', background: 'rgba(255,255,255,0.02)' }}>
+            <h2 className="text-xl font-bold mb-8 flex items-center gap-3">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#ffd700]" />
+              {editingId ? 'Edit Architectural Specs' : 'Deploy New Neural Asset'}
+            </h2>
+            <form onSubmit={handleSubmit} className="space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-[10px] font-bold text-white/30 uppercase tracking-widest mb-2">Agent Designation *</label>
+                    <input
+                      type="text"
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      className="w-full px-5 py-3.5 rounded-xl input-glass outline-none text-sm placeholder-white/10"
+                      placeholder="e.g. Nexus Protocol V.1"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-white/30 uppercase tracking-widest mb-2">Protocol Interface *</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {PLATFORMS.map((p) => (
+                        <button
+                          key={p.value}
+                          type="button"
+                          onClick={() => setForm({ ...form, platform: p.value })}
+                          className={`py-3 rounded-xl border transition-all flex flex-col items-center gap-1 ${
+                            form.platform === p.value ? 'bg-[#ffd700]/10 border-[#ffd700]/40 text-[#ffd700]' : 'bg-white/5 border-white/5 text-white/20 hover:border-white/10'
+                          }`}
+                        >
+                          <span className="text-xl">{p.icon}</span>
+                          <span className="text-[9px] font-bold uppercase">{p.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
 
-              {/* Platform Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Platform *</label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-                  {PLATFORMS.map((p) => (
-                    <button
-                      key={p.value}
-                      type="button"
-                      onClick={() => setForm({ ...form, platform: p.value })}
-                      className={`flex flex-col items-center p-3 rounded-lg border-2 transition ${
-                        form.platform === p.value
-                          ? 'border-primary-500 bg-primary-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <span className="text-2xl mb-1">{p.icon}</span>
-                      <span className="text-xs font-medium">{p.label}</span>
-                    </button>
-                  ))}
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-[10px] font-bold text-white/30 uppercase tracking-widest mb-2">Dossier / Summary</label>
+                    <textarea
+                      value={form.description}
+                      onChange={(e) => setForm({ ...form, description: e.target.value })}
+                      rows={5}
+                      className="w-full px-5 py-3.5 rounded-xl input-glass outline-none text-sm placeholder-white/10 resize-none"
+                      placeholder="Defining the core intelligence and utility..."
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* Description */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  rows={4}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Describe what your bot does, its capabilities, and use cases..."
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Price */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Price ($) *</label>
+                  <label className="block text-[10px] font-bold text-white/30 uppercase tracking-widest mb-2">Acquisition Cost ($) *</label>
                   <input
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    type="number" step="0.01"
                     value={form.price}
                     onChange={(e) => setForm({ ...form, price: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-5 py-3.5 rounded-xl input-glass outline-none text-sm placeholder-white/10"
                     placeholder="29.99"
                     required
                   />
                 </div>
-
-                {/* Category */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <label className="block text-[10px] font-bold text-white/30 uppercase tracking-widest mb-2">Domain Category</label>
                   <select
                     value={form.category}
                     onChange={(e) => setForm({ ...form, category: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-5 py-3.5 rounded-xl input-glass outline-none text-sm pr-10 cursor-pointer appearance-none bg-[#111]"
                   >
-                    <option value="">Select a category</option>
-                    {CATEGORIES.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
+                    <option value="">Select Domain</option>
+                    {CATEGORIES.map((c) => (<option key={c} value={c}>{c}</option>))}
                   </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-white/30 uppercase tracking-widest mb-2">Intelligence Tags <span className="opacity-40 italic">(CSV)</span></label>
+                  <input
+                    type="text"
+                    value={form.features}
+                    onChange={(e) => setForm({ ...form, features: e.target.value })}
+                    className="w-full px-5 py-3.5 rounded-xl input-glass outline-none text-sm placeholder-white/10"
+                    placeholder="Auto-Response, CRM Sync..."
+                  />
                 </div>
               </div>
 
-              {/* Features */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Features <span className="text-gray-400">(comma-separated)</span>
-                </label>
-                <input
-                  type="text"
-                  value={form.features}
-                  onChange={(e) => setForm({ ...form, features: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Auto-reply, Scheduling, Analytics, Templates"
-                />
-              </div>
-
-              {/* Image URL */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Image URL <span className="text-gray-400">(optional)</span>
-                </label>
-                <input
-                  type="url"
-                  value={form.image_url}
-                  onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="https://example.com/bot-image.png"
-                />
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-4 pt-4">
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="bg-primary-600 hover:bg-primary-700 text-white px-8 py-3 rounded-lg transition font-medium disabled:opacity-50"
+                  className="px-10 py-3.5 rounded-2xl bg-[#ffd700] text-[#050505] font-black text-xs uppercase tracking-widest hover:scale-[1.03] transition-all disabled:opacity-50"
                 >
-                  {submitting ? 'Saving...' : editingId ? 'Update Listing' : 'Create Listing'}
+                  {submitting ? 'PROCESSING...' : editingId ? 'UPDATE SPECS' : 'DEPLOY TO GRID'}
                 </button>
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-lg transition"
+                  className="px-8 py-3.5 rounded-2xl border border-white/10 text-white/40 font-bold text-xs uppercase tracking-widest hover:bg-white/5 transition-all"
                 >
-                  Cancel
+                  CANCEL
                 </button>
               </div>
             </form>
           </div>
         )}
 
-        {/* Listings Table */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-gray-900">Your Bot Listings</h2>
-              <button
-                onClick={fetchListings}
-                className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-              >
-                Refresh
-              </button>
-            </div>
+        {/* Registry Table */}
+        <div className="glass-card overflow-hidden fade-up" style={{ animationDelay: '0.3s' }}>
+          <div className="p-8 border-b border-white/5 flex justify-between items-center">
+            <h2 className="text-sm font-bold uppercase tracking-[0.2em] text-white/50">Neural Registry</h2>
+            <span className="text-[10px] font-bold py-1 px-3 rounded-full bg-white/5 text-white/30 uppercase tracking-widest">{listings.length} Entries</span>
           </div>
 
-          {loading ? (
-            <div className="p-8 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
-              <p className="text-gray-500">Loading listings...</p>
-            </div>
-          ) : listings.length === 0 ? (
-            <div className="p-12 text-center text-gray-500">
-              <div className="text-5xl mb-4">🤖</div>
-              <p className="text-lg mb-2">No listings yet</p>
-              <p className="mb-4">Create your first bot listing to start selling on the marketplace!</p>
-              <button
-                onClick={() => setShowForm(true)}
-                className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition"
-              >
-                Create Your First Bot
-              </button>
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-200">
-              {listings.map((listing) => {
-                const platformInfo = getPlatformInfo(listing.platform);
-                return (
-                  <div key={listing.id} className="p-6 hover:bg-gray-50 transition">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className="text-xl">{platformInfo.icon}</span>
-                          <h3 className="text-lg font-semibold text-gray-900">{listing.name}</h3>
-                          <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${platformInfo.color}`}>
-                            {platformInfo.label}
-                          </span>
-                          <span
-                            className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                              listing.status === 'published'
-                                ? 'bg-green-100 text-green-700'
-                                : listing.status === 'archived'
-                                ? 'bg-gray-100 text-gray-600'
-                                : 'bg-yellow-100 text-yellow-700'
-                            }`}
-                          >
-                            {listing.status}
-                          </span>
-                        </div>
-                        {listing.description && (
-                          <p className="text-sm text-gray-600 mb-2 line-clamp-2">{listing.description}</p>
-                        )}
-                        <div className="flex items-center gap-4 text-sm text-gray-500">
-                          <span className="font-medium text-gray-900">${parseFloat(listing.price).toFixed(2)}</span>
-                          {listing.category && <span>• {listing.category}</span>}
-                          <span>• {listing.total_sales || 0} sales</span>
-                          <span>• {new Date(listing.created_at).toLocaleDateString()}</span>
-                        </div>
-                        {listing.features && listing.features.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {listing.features.map((f, i) => (
-                              <span key={i} className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">
-                                {f}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-white/5">
+                  <th className="px-8 py-4 text-[10px] font-bold text-white/20 uppercase tracking-widest">Bot Persona</th>
+                  <th className="px-8 py-4 text-[10px] font-bold text-white/20 uppercase tracking-widest">Protocol</th>
+                  <th className="px-8 py-4 text-[10px] font-bold text-white/20 uppercase tracking-widest">Value</th>
+                  <th className="px-8 py-4 text-[10px] font-bold text-white/20 uppercase tracking-widest">Status</th>
+                  <th className="px-8 py-4 text-[10px] font-bold text-white/20 uppercase tracking-widest text-right">Ops</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/[0.03]">
+                {listings.map((l) => (
+                  <tr key={l.id} className="group hover:bg-white/[0.02] transition-colors">
+                    <td className="px-8 py-5">
+                      <div className="font-bold text-sm text-white/90 group-hover:text-white">{l.name}</div>
+                      <div className="text-[10px] text-white/20 font-medium uppercase mt-1">{l.category || 'Uncategorised'}</div>
+                    </td>
+                    <td className="px-8 py-5">
+                      <span className="text-lg mr-2 inline-block grayscale group-hover:grayscale-0 transition-all">{PLATFORMS.find(p => p.value === l.platform)?.icon || '🤖'}</span>
+                      <span className="text-[11px] font-bold text-white/40 uppercase">{l.platform}</span>
+                    </td>
+                    <td className="px-8 py-5 text-sm font-bold text-[#ffd700]/80">${parseFloat(l.price).toFixed(2)}</td>
+                    <td className="px-8 py-5">
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handlePublishToggle(listing.id, listing.status)}
-                          className={`px-3 py-1.5 text-sm rounded-lg transition font-medium ${
-                            listing.status === 'published'
-                              ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-                              : 'bg-green-100 text-green-700 hover:bg-green-200'
-                          }`}
-                        >
-                          {listing.status === 'published' ? 'Unpublish' : 'Publish'}
-                        </button>
-                        <button
-                          onClick={() => handleEdit(listing)}
-                          className="px-3 py-1.5 text-sm bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition font-medium"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(listing.id)}
-                          className="px-3 py-1.5 text-sm bg-red-100 text-red-700 hover:bg-red-200 rounded-lg transition font-medium"
-                        >
-                          Delete
-                        </button>
+                        <div className={`w-1.5 h-1.5 rounded-full ${l.status === 'published' ? 'bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.4)]' : 'bg-white/10'}`} />
+                        <span className={`text-[10px] font-bold uppercase tracking-widest ${l.status === 'published' ? 'text-green-400' : 'text-white/20'}`}>{l.status}</span>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                    </td>
+                    <td className="px-8 py-5 text-right">
+                      <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => handlePublishToggle(l.id, l.status)} className="text-[10px] font-bold text-white/40 hover:text-[#ffd700] uppercase tracking-widest">{l.status === 'published' ? 'Recall' : 'Deploy'}</button>
+                        <button onClick={() => handleEdit(l)} className="text-[10px] font-bold text-white/40 hover:text-white uppercase tracking-widest">Adjust</button>
+                        <button onClick={() => setDeleteModal({ open: true, id: l.id })} className="text-[10px] font-bold text-red-400/40 hover:text-red-400 uppercase tracking-widest">Purge</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
+
+      <ConfirmModal
+        open={deleteModal.open}
+        onClose={() => setDeleteModal({ open: false, id: null })}
+        onConfirm={confirmDelete}
+        title="Purge Asset"
+        message="Are you sure you want to permanently erase this agent specification from the registry? All sales metrics will be archived."
+        confirmText="Confirm Purge"
+        variant="danger"
+      />
     </div>
   );
 };
