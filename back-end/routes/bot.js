@@ -1258,14 +1258,113 @@ router.post('/email-forwarding/:configId/test', verifyToken, checkEmailForwardin
       return res.status(404).json({ success: false, message: 'Configuration not found.' });
     }
 
-    // Test IMAP connection with given credentials
-    const transporter = createTransporter(config.email, config.password);
+    // Detect if using OAuth token
+    const isOAuth = config.password && config.password.startsWith('1//');
+    let transporter;
+
+    if (isOAuth) {
+      // OAuth2 configuration for SMTP
+      const nodemailer = (await import('nodemailer')).default;
+      transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          type: 'OAuth2',
+          user: config.email,
+          clientId: process.env.EMAIL_FORWARDING_CLIENT_ID,
+          clientSecret: process.env.EMAIL_FORWARDING_CLIENT_SECRET,
+          refreshToken: config.password
+        }
+      });
+    } else {
+      // Regular password authentication
+      transporter = createTransporter(config.email, config.password);
+    }
+
     await transporter.verify();
 
     res.status(200).json({ success: true, message: 'Email connection verified successfully!' });
   } catch (err) {
     console.error('Error testing email forwarding connection:', err.message);
     res.status(400).json({ success: false, message: `Connection test failed: ${err.message}` });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// EMAIL FORWARDING DIAGNOSTICS
+// ---------------------------------------------------------------------------
+
+// POST - Test OAuth Token Generation (Diagnostic Endpoint)
+router.post('/email-forwarding/test-oauth-token', verifyToken, checkEmailForwardingSupabase, async (req, res) => {
+  try {
+    const { configId } = req.body;
+
+    if (!configId) {
+      return res.status(400).json({ success: false, message: 'Configuration ID required.' });
+    }
+
+    // Fetch config
+    const { data: config, error: fetchError } = await emailForwardingSupabase
+      .from('email_forwarding_configs')
+      .select('*')
+      .eq('id', configId)
+      .eq('user_id', req.user.user_id)
+      .single();
+
+    if (fetchError || !config) {
+      return res.status(404).json({ success: false, message: 'Configuration not found.' });
+    }
+
+    if (!config.password || !config.password.startsWith('1//')) {
+      return res.status(400).json({ success: false, message: 'Configuration is not using OAuth.' });
+    }
+
+    // Test OAuth credentials
+    if (!process.env.EMAIL_FORWARDING_CLIENT_ID || !process.env.EMAIL_FORWARDING_CLIENT_SECRET) {
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Email Forwarding OAuth credentials not configured on server.' 
+      });
+    }
+
+    // Try to generate access token
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.EMAIL_FORWARDING_CLIENT_ID,
+      process.env.EMAIL_FORWARDING_CLIENT_SECRET
+    );
+    
+    oauth2Client.setCredentials({ refresh_token: config.password });
+    const result = await oauth2Client.getAccessToken();
+    
+    if (result.token) {
+      res.status(200).json({ 
+        success: true, 
+        message: 'OAuth token generated successfully!',
+        details: {
+          email: config.email,
+          tokenLength: result.token.length,
+          expiryDate: result.res?.data?.expiry_date || 'Unknown'
+        }
+      });
+    } else {
+      res.status(500).json({ 
+        success: false, 
+        message: 'Failed to generate access token from refresh token.' 
+      });
+    }
+  } catch (error) {
+    console.error('OAuth token test error:', error.message);
+    
+    let errorMsg = error.message;
+    if (error.response?.status === 400) {
+      errorMsg = 'Invalid or expired refresh token. Please re-authenticate with Google.';
+    } else if (error.message.includes('Invalid refresh token')) {
+      errorMsg = 'The refresh token is no longer valid. Please re-authenticate with Google.';
+    }
+    
+    res.status(400).json({ 
+      success: false, 
+      message: `OAuth token generation failed: ${errorMsg}` 
+    });
   }
 });
 

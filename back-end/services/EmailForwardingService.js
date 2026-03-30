@@ -78,7 +78,12 @@ class EmailForwardingService {
         try {
           await this.processConfig(config);
         } catch (err) {
-          console.error(`[EmailForwarding] Error processing config ${config.id}:`, err.message);
+          console.error(`[EmailForwarding] ❌ Error processing config ${config.id} (${config.name}):`, err.message);
+          if (err.message.includes('Invalid credentials')) {
+            console.error(`[EmailForwarding]    → The OAuth token may be expired. User should re-authenticate.`);
+          } else if (err.message.includes('refresh token')) {
+            console.error(`[EmailForwarding]    → OAuth refresh token issue. Please verify the token format.`);
+          }
         }
       }
 
@@ -94,9 +99,11 @@ class EmailForwardingService {
    * Process a single configuration
    */
   async processConfig(config) {
-    console.log(`[EmailForwarding] Processing config: ${config.name} (ID: ${config.id})`);
+    console.log(`[EmailForwarding] 📧 Processing config: ${config.name} (ID: ${config.id}, Email: ${config.email})`);
 
     const isGoogleOAuth = config.password && config.password.startsWith('1//');
+    console.log(`[EmailForwarding]    Auth method: ${isGoogleOAuth ? '🔐 OAuth 2.0' : '🔑 Password'}`);
+    
     let imapConfig = {
       user: config.email,
       host: this.getImapHost(config.email),
@@ -113,9 +120,12 @@ class EmailForwardingService {
 
     if (isGoogleOAuth) {
       try {
+        console.log(`[EmailForwarding] Generating OAuth token for ${config.email}...`);
         imapConfig.xoauth2 = await this.generateXOAuth2Token(config.email, config.password);
+        console.log(`[EmailForwarding] ✅ OAuth token generated successfully`);
       } catch (err) {
-        console.error(`[EmailForwarding] Failed to generate OAuth token for IMAP.`, err.message);
+        console.error(`[EmailForwarding] ❌ Failed to generate OAuth token for IMAP:`, err.message);
+        console.error(`[EmailForwarding] Full error:`, err);
         return;
       }
     } else {
@@ -126,7 +136,20 @@ class EmailForwardingService {
 
     return new Promise((resolve, reject) => {
       imap.on('error', (error) => {
-        console.error(`[EmailForwarding] IMAP error for ${config.name}:`, error.message);
+        console.error(`[EmailForwarding] ❌ IMAP connection error for ${config.name} (${config.email}):`, error.message);
+        
+        // Provide specific guidance based on error type
+        if (error.message.includes('Invalid credentials')) {
+          console.error(`[EmailForwarding]    → Cause: Google OAuth token is invalid or expired`);
+          console.error(`[EmailForwarding]    → Fix: Re-authenticate by clicking "Connect with Google" again`);
+        } else if (error.message.includes('timeout')) {
+          console.error(`[EmailForwarding]    → Cause: Connection timeout to Gmail IMAP server`);
+          console.error(`[EmailForwarding]    → Fix: Check your internet connection`);
+        } else if (error.message.includes('ENOTFOUND')) {
+          console.error(`[EmailForwarding]    → Cause: DNS lookup failed for Gmail server`);
+          console.error(`[EmailForwarding]    → Fix: Check your internet connection or firewall`);
+        }
+        
         reject(error);
       });
 
@@ -137,7 +160,7 @@ class EmailForwardingService {
 
       imap.on('ready', async () => {
         try {
-          console.log(`[EmailForwarding] Connected to ${config.email}`);
+          console.log(`[EmailForwarding] ✅ Connected to ${config.email}`);
           
           // Get mailboxes to find the forwarding label
           imap.getBoxes((error, boxes) => {
@@ -392,19 +415,43 @@ class EmailForwardingService {
    * Generates an XOAUTH2 token buffer string for Node-IMAP
    */
   async generateXOAuth2Token(email, refreshToken) {
+    if (!refreshToken || !refreshToken.startsWith('1//')) {
+      throw new Error(`Invalid refresh token format for ${email}. Expected OAuth token starting with "1//"`);
+    }
+
+    if (!process.env.EMAIL_FORWARDING_CLIENT_ID || !process.env.EMAIL_FORWARDING_CLIENT_SECRET) {
+      throw new Error('Missing EMAIL_FORWARDING_CLIENT_ID or EMAIL_FORWARDING_CLIENT_SECRET in environment variables');
+    }
+
     const oauth2Client = new google.auth.OAuth2(
       process.env.EMAIL_FORWARDING_CLIENT_ID,
       process.env.EMAIL_FORWARDING_CLIENT_SECRET
     );
-    oauth2Client.setCredentials({ refresh_token: refreshToken });
-    const { token } = await oauth2Client.getAccessToken();
+    
+    try {
+      oauth2Client.setCredentials({ refresh_token: refreshToken });
+      const { token } = await oauth2Client.getAccessToken();
+      
+      if (!token) {
+        throw new Error('Failed to obtain access token from refresh token');
+      }
 
-    return Buffer.from([
-      `user=${email}`,
-      `auth=Bearer ${token}`,
-      '',
-      ''
-    ].join('\x01'), 'utf-8').toString('base64');
+      const xoauth2Token = Buffer.from([
+        `user=${email}`,
+        `auth=Bearer ${token}`,
+        '',
+        ''
+      ].join('\x01'), 'utf-8').toString('base64');
+
+      console.log(`[EmailForwarding] ✅ Generated XOAUTH2 token (${xoauth2Token.length} chars)`);
+      return xoauth2Token;
+    } catch (error) {
+      console.error(`[EmailForwarding] Error generating access token:`, error.message);
+      if (error.response?.status === 400) {
+        throw new Error(`Invalid or expired refresh token for ${email}. Please re-authenticate with Google.`);
+      }
+      throw error;
+    }
   }
 
   /**

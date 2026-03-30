@@ -489,6 +489,19 @@ const EmailForwarding = () => {
                 {editingId ? 'Edit Configuration' : 'New Configuration'}
               </h2>
 
+              {/* OAuth Recommendation Banner */}
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex gap-3">
+                  <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zm-11-1a1 1 0 11-2 0 1 1 0 012 0zM8 7a1 1 0 000 2h6a1 1 0 000-2H8zm0 3a1 1 0 000 2h3a1 1 0 000-2H8z" clipRule="evenodd"/>
+                  </svg>
+                  <div className="text-sm text-blue-800">
+                    <p className="font-semibold mb-1">🔒 Use Google OAuth (Recommended)</p>
+                    <p className="text-blue-700">Google no longer accepts regular passwords for third-party apps. Click &quot;Secure: Connect with Google OAuth&quot; below for the safest, easiest setup.</p>
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-4">
                 {/* Name & Description */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -543,36 +556,45 @@ const EmailForwarding = () => {
                        <div className="w-full px-4 py-3 bg-green-50 border border-green-200 text-green-700 rounded-xl flex items-center justify-between font-medium">
                           <span className="flex items-center gap-2">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            Google Account Linked
+                            Google Account Linked ✓
                           </span>
-                          <button type="button" onClick={() => setFormData({ ...formData, password: '' })} className="text-sm underline hover:text-green-800">Unlink</button>
+                          <button type="button" onClick={() => setFormData({ ...formData, password: '' })} className="text-sm underline hover:text-green-800">Change</button>
                        </div>
                     ) : (
-                      <div className="flex gap-2">
-                        <input
-                          type="password"
-                          required
-                          value={formData.password}
-                          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                          placeholder="App Password..."
-                          className="flex-1 px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white transition"
-                        />
+                      <div className="space-y-3">
                         <button
                           type="button"
                           onClick={handleGoogleSignIn}
-                          className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 flex items-center gap-2 transition shadow-sm font-medium"
+                          className="w-full px-4 py-3 bg-blue-50 hover:bg-blue-100 border border-blue-300 text-blue-700 rounded-xl flex items-center justify-center gap-2 transition font-medium shadow-sm"
                         >
-                          <svg className="w-5 h-5 drop-shadow-sm" viewBox="0 0 24 24">
+                          <svg className="w-5 h-5" viewBox="0 0 24 24">
                             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                             <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                           </svg>
-                          Connect Google
+                          🔒 Secure: Connect with Google OAuth
                         </button>
+                        
+                        <details className="cursor-pointer">
+                          <summary className="text-xs text-gray-600 hover:text-gray-700 font-medium py-2">
+                            📝 Alternative: Use App Password (Less Secure)
+                          </summary>
+                          <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
+                            <p className="text-xs text-amber-800">⚠️ Gmail App Passwords are less secure and deprecated. Google OAuth is recommended.</p>
+                            <input
+                              type="password"
+                              value={formData.password}
+                              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                              placeholder="16-character app password"
+                              className="w-full px-4 py-2 bg-white border border-amber-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm"
+                            />
+                            <p className="text-xs text-gray-600">Get app password: <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">myaccount.google.com/apppasswords</a></p>
+                          </div>
+                        </details>
                       </div>
                     )}
-                    <p className="text-xs text-gray-500 mt-1">Provide an app password OR securely connect Google.</p>
+                    <p className="text-xs text-gray-500 mt-2">Recommended: Use Google OAuth for secure, password-free access.</p>
                   </div>
                 </div>
 
