@@ -2,13 +2,14 @@ import { useState, useEffect, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { botAPI, marketplaceAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import BotTable from '../components/BotTable';
 import FluidOrb from '../components/FluidOrb';
 
 /* ── Starfield (reused from Auth/Landing) ── */
 const Starfield = memo(() => {
   const [stars] = useState(() =>
-    Array.from({ length: 100 }, (_, i) => ({
+    Array.from({ length: 120 }, (_, i) => ({
       id: i, left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%`,
       size: `${Math.random() * 1.8 + 0.4}px`, animDelay: `${Math.random() * 5}s`,
       animDur: `${Math.random() * 4 + 2}s`, opacity: Math.random() * 0.4 + 0.3,
@@ -49,6 +50,7 @@ const DASHBOARD_STYLES = `
 
 const BuyerDashboard = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [bots, setBots] = useState([]);
   const [purchases, setPurchases] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -84,7 +86,6 @@ const BuyerDashboard = () => {
       }
     } catch (err) {
       console.error('Failed to fetch purchases:', err);
-      // silently fail for purchases
     }
   };
 
@@ -133,8 +134,8 @@ const BuyerDashboard = () => {
           <div className="flex items-center gap-2 mb-2">
             <span className="px-2.5 py-0.5 rounded-full bg-[#ffd700]/10 border border-[#ffd700]/20 text-[#ffd700] text-[10px] font-bold uppercase tracking-wider">Buyer</span>
           </div>
-          <h1 className="text-4xl font-bold tracking-tight text-white mb-2">Dashboard</h1>
-          <p className="text-white/40 text-[14px]">Welcome back, <span className="text-white/80 font-medium">{user?.name}</span>. Here's your bot command center.</p>
+          <h1 className="text-4xl font-bold tracking-tight text-white mb-2">{t('buyer.title')}</h1>
+          <p className="text-white/40 text-[14px]">{t('buyer.welcome')}, <span className="text-white/80 font-medium">{user?.name}</span>!</p>
         </div>
 
         {error && (
@@ -147,10 +148,10 @@ const BuyerDashboard = () => {
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
           {[
-            { label: 'My Bots', value: bots.length, color: '#ffd700', icon: '🤖' },
-            { label: 'Active Bots', value: activeBots, color: '#4ade80', icon: '⚡' },
-            { label: 'Purchases', value: purchases.length, color: '#a78bfa', icon: '🛒' },
-            { label: 'Inactive', value: bots.length - activeBots, color: '#94a3b8', icon: '🛡️' }
+            { label: t('buyer.myBots'), value: bots.length, color: '#ffd700', icon: '🤖' },
+            { label: t('buyer.activeBots'), value: activeBots, color: '#4ade80', icon: '⚡' },
+            { label: t('buyer.purchasedBots'), value: purchases.length, color: '#a78bfa', icon: '🛒' },
+            { label: t('buyer.inactiveBots'), value: bots.length - activeBots, color: '#94a3b8', icon: '🛡️' }
           ].map((stat, idx) => (
             <div key={idx} className="glass-card p-6 fade-up" style={{ animationDelay: `${idx * 0.05}s` }}>
               <div className="flex justify-between items-start mb-4">
@@ -166,7 +167,7 @@ const BuyerDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-10 fade-up" style={{ animationDelay: '0.2s' }}>
           <Link to="/marketplace" className="glass-card p-5 group flex items-center justify-between hover:border-[#ffd700]/40">
             <div>
-              <p className="text-[13px] font-bold mb-1">Explore Marketplace</p>
+              <p className="text-[13px] font-bold mb-1">{t('buyer.browseMarketplace')}</p>
               <p className="text-[11px] text-white/40">Discover elite bots</p>
             </div>
             <span className="transition-transform group-hover:translate-x-1">→</span>
@@ -180,15 +181,15 @@ const BuyerDashboard = () => {
           </Link>
           <Link to="/email-forwarding" className="glass-card p-5 group flex items-center justify-between hover:border-indigo-500/40">
             <div>
-              <p className="text-[13px] font-bold mb-1">Email Forwarding</p>
+              <p className="text-[13px] font-bold mb-1">{t('buyer.emailForwarding')}</p>
               <p className="text-[11px] text-white/40">Configure routing</p>
             </div>
             <span className="transition-transform group-hover:translate-x-1 text-indigo-400">→</span>
           </Link>
           <button onClick={fetchBots} className="glass-card p-5 group flex items-center justify-between hover:border-[#ffd700]/40">
             <div>
-              <p className="text-[13px] font-bold mb-1">Sync Systems</p>
-              <p className="text-[11px] text-white/40">Refresh all data</p>
+              <p className="text-[13px] font-bold mb-1">{t('buyer.refreshBots')}</p>
+              <p className="text-[11px] text-white/40">Sync system data</p>
             </div>
             <span className="transition-transform group-hover:rotate-180 duration-500">↻</span>
           </button>
@@ -197,13 +198,13 @@ const BuyerDashboard = () => {
         {/* My Bots Table */}
         <div className="glass-card overflow-hidden fade-up mb-12" style={{ animationDelay: '0.3s' }}>
           <div className="px-6 py-5 border-b border-white/5 flex justify-between items-center">
-            <h2 className="text-sm font-semibold uppercase tracking-widest text-white/50">My Integrated Bots</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-widest text-white/50">{t('buyer.myBots')}</h2>
             <div className="flex gap-3">
                <Link to="/email-forwarding" className="text-[10px] font-bold px-4 py-1.5 rounded-full border border-white/10 text-white/40 hover:text-white hover:bg-white/5 transition-all flex items-center gap-2">
                  <span>📩</span> Forwarding
                </Link>
                <Link to="/email-bot" className="text-[10px] font-bold px-4 py-1.5 rounded-full bg-[#ffd700] text-[#050505] hover:scale-105 transition-all">
-                 + New Bot
+                 {t('buyer.createBot')}
                </Link>
             </div>
           </div>
@@ -259,136 +260,87 @@ const BuyerDashboard = () => {
                        <span className="text-[9px] font-bold text-white/20 group-hover:text-white/40 uppercase tracking-widest transition-colors">Access →</span>
                     </div>
                   </button>
-
                 );
               })}
             </div>
           )}
         </div>
-
-        {/* Purchased Bot Access Modal */}
-        {accessModal.open && (
-          <div
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-            onClick={() => {
-              setAccessModal({ open: false, loading: false, bot: null, resource: null });
-              setAccessError('');
-            }}
-          >
-            <div
-              className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900">{accessModal.bot?.name || 'Purchased Bot'}</h3>
-                  <p className="text-sm text-gray-500">Access details provided by the seller</p>
-                </div>
-                <button
-                  onClick={() => {
-                    setAccessModal({ open: false, loading: false, bot: null, resource: null });
-                    setAccessError('');
-                  }}
-                  className="text-gray-500 hover:text-gray-800 text-2xl leading-none"
-                >
-                  &times;
-                </button>
-              </div>
-
-              <div className="p-6 space-y-5">
-                {accessError && (
-                  <div className="px-4 py-3 rounded-lg border bg-red-50 border-red-200 text-red-700 text-sm">
-                    {accessError}
-                  </div>
-                )}
-
-                {accessModal.loading ? (
-                  <div className="py-8 text-center">
-                    <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600"></div>
-                    <p className="mt-3 text-sm text-gray-500">Loading bot details...</p>
-                  </div>
-                ) : (
-                  <>
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-900 mb-2">Description</h4>
-                      <p className="text-sm text-gray-700">
-                        {accessModal.bot?.description || 'No description provided.'}
-                      </p>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      {accessModal.bot?.category && (
-                        <span className="px-2 py-1 rounded bg-blue-50 text-blue-700 text-xs font-medium">
-                          {accessModal.bot.category}
-                        </span>
-                      )}
-                      {accessModal.bot?.status && (
-                        <span className="px-2 py-1 rounded bg-green-50 text-green-700 text-xs font-medium">
-                          {accessModal.bot.status}
-                        </span>
-                      )}
-                      <span className="px-2 py-1 rounded bg-gray-100 text-gray-700 text-xs font-medium">
-                        {accessModal.bot?.platform || accessModal.resource?.platform || 'unknown'}
-                      </span>
-                    </div>
-
-                    {Array.isArray(accessModal.bot?.features) && accessModal.bot.features.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-semibold text-gray-900 mb-2">Features</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {accessModal.bot.features.map((feature, idx) => (
-                            <span key={`modal-feature-${idx}`} className="px-2 py-1 rounded bg-gray-100 text-gray-700 text-xs">
-                              {feature}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-900 mb-2">GitHub Link</h4>
-                      {accessModal.resource?.github_link ? (
-                        <a
-                          href={accessModal.resource.github_link}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-sm text-blue-600 hover:text-blue-800 underline break-all"
-                        >
-                          {accessModal.resource.github_link}
-                        </a>
-                      ) : (
-                        <p className="text-sm text-gray-500">No GitHub link provided.</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-900 mb-2">Script</h4>
-                      {accessModal.resource?.bot_script ? (
-                        <pre className="text-xs bg-gray-900 text-green-200 p-4 rounded-lg overflow-auto max-h-72 whitespace-pre-wrap">
-                          {accessModal.resource.bot_script}
-                        </pre>
-                      ) : (
-                        <p className="text-sm text-gray-500">No script provided.</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-900 mb-2">Configuration</h4>
-                      {accessModal.resource?.config_json && Object.keys(accessModal.resource.config_json).length > 0 ? (
-                        <pre className="text-xs bg-gray-100 text-gray-800 p-4 rounded-lg overflow-auto max-h-72 whitespace-pre-wrap">
-                          {JSON.stringify(accessModal.resource.config_json, null, 2)}
-                        </pre>
-                      ) : (
-                        <p className="text-sm text-gray-500">No additional configuration provided.</p>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Access Modal */}
+      {accessModal.open && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setAccessModal({ ...accessModal, open: false })} />
+          <div className="glass-card w-full max-w-xl relative p-8 shadow-2xl">
+             <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-1 group-hover:text-[#ffd700] transition-colors">{accessModal.bot?.name || 'Bot Details'}</h3>
+                  <p className="text-[11px] text-white/30 uppercase tracking-[0.2em]">Secure Node Provisioning</p>
+                </div>
+                <button onClick={() => setAccessModal({ ...accessModal, open: false })} className="text-white/20 hover:text-white transition-colors">&times;</button>
+             </div>
+
+             {accessModal.loading ? (
+                <div className="py-12 text-center">
+                  <div className="w-8 h-8 rounded-full border-2 border-[#ffd700]/20 border-t-[#ffd700] animate-spin mx-auto mb-4" />
+                  <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest">Decrypting Provisioning Data…</p>
+                </div>
+             ) : accessError ? (
+                <div className="py-8 px-5 rounded-xl bg-red-500/5 border border-red-500/20 text-red-400 text-xs mb-4">
+                  {accessError}
+                </div>
+             ) : (
+                <div className="space-y-6">
+                   <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                      <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-2">Internal Script Identifiers</p>
+                      <div className="flex flex-wrap gap-2">
+                         <span className="px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase">ID: {accessModal.bot?.id}</span>
+                         <span className="px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] font-bold uppercase">{accessModal.bot?.platform} Protocol</span>
+                      </div>
+                   </div>
+
+                   <div className="space-y-4">
+                      {accessModal.resource?.script_link && (
+                        <a href={accessModal.resource.script_link} target="_blank" rel="noopener noreferrer" 
+                          className="flex items-center justify-between p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-[#ffd700]/40 transition-all group">
+                           <div>
+                              <p className="text-xs font-bold text-white mb-1">Source Manifesto</p>
+                              <p className="text-[10px] text-white/30 uppercase tracking-widest">Download Node Configuration</p>
+                           </div>
+                           <span className="text-[#ffd700] transition-transform group-hover:translate-x-1">LINK →</span>
+                        </a>
+                      )}
+                      
+                      {accessModal.resource?.custom_links && accessModal.resource.custom_links.length > 0 && (
+                        <div className="space-y-3">
+                           {accessModal.resource.custom_links.map((link, idx) => (
+                             <a key={idx} href={link.url} target="_blank" rel="noopener noreferrer"
+                               className="flex items-center justify-between p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-[#ffd700]/40 transition-all group">
+                                <div>
+                                   <p className="text-xs font-bold text-white mb-1 uppercase tracking-tighter">{link.label || 'Satellite Asset'}</p>
+                                   <p className="text-[10px] text-white/30 uppercase tracking-widest truncate max-w-[200px]">{link.url}</p>
+                                </div>
+                                <span className="text-[#ffd700] transition-transform group-hover:translate-x-1">VIEW →</span>
+                             </a>
+                           ))}
+                        </div>
+                      )}
+
+                      {!accessModal.resource?.script_link && (!accessModal.resource?.custom_links || accessModal.resource.custom_links.length === 0) && (
+                        <div className="py-8 text-center text-white/20 italic text-sm">
+                           No provisioning resources attached by seller.
+                        </div>
+                      )}
+                   </div>
+                </div>
+             )}
+             
+             <div className="mt-8 pt-6 border-t border-white/5 text-center">
+                <p className="text-[9px] font-bold text-white/10 uppercase tracking-[0.4em]">Proprietary 2024 Botify Grid Provisioning</p>
+             </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

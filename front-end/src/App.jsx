@@ -54,7 +54,7 @@ function App() {
         <Navbar />
         <Routes>
           {/* Public Routes */}
-          <Route path="/" element={<LandingPage />} />
+          <Route path="/" element={user ? <DashboardRedirect /> : <LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/marketplace" element={<Marketplace />} />
@@ -102,7 +102,7 @@ function App() {
           <Route
             path="/email-forwarding"
             element={
-              <PrivateRoute allowedRoles={[2]}>
+              <PrivateRoute allowedRoles={[2, 3]}>
                 <EmailForwarding />
               </PrivateRoute>
             }

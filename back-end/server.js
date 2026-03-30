@@ -121,6 +121,15 @@ const startServer = (port) => {
     try {
       await emailForwardingService.start();
       console.log('✅ Email Forwarding Service started');
+      
+      // Validate OAuth credentials for Email Forwarding
+      if (!process.env.EMAIL_FORWARDING_CLIENT_ID || !process.env.EMAIL_FORWARDING_CLIENT_SECRET) {
+        console.warn('⚠️  EMAIL_FORWARDING_CLIENT_ID or EMAIL_FORWARDING_CLIENT_SECRET not configured!');
+        console.warn('     Email Forwarding OAuth will not work. Set these in your .env file.');
+        console.warn('     Instructions: https://console.cloud.google.com -> Create OAuth2 credentials');
+      } else {
+        console.log('✅ Email Forwarding OAuth credentials configured');
+      }
     } catch (err) {
       console.error('Email Forwarding Service failed to initialize:', err.message);
     }

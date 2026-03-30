@@ -63,6 +63,7 @@ export const botAPI = {
   updateEmailForwardingConfig: (configId, config) => api.put(`/bot/email-forwarding/${configId}`, config),
   deleteEmailForwardingConfig: (configId) => api.delete(`/bot/email-forwarding/${configId}`),
   testEmailForwarding: (configId) => api.post(`/bot/email-forwarding/${configId}/test`),
+  testOAuthToken: (configId) => api.post('/bot/email-forwarding/test-oauth-token', { configId }),
   getOAuthURL: () => api.get('/bot/email-forwarding/oauth/url'),
   exchangeOAuthCode: (code) => api.post('/bot/email-forwarding/oauth/callback', { code }),
   getEmailForwardingLogs: () => api.get('/bot/email-forwarding-logs'),

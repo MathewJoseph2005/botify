@@ -196,7 +196,7 @@ const SellerDashboard = () => {
               <button onClick={() => { fetchBots(); fetchListings(); }} className="glass-card p-5 group flex items-center justify-between hover:border-[#ffd700]/40">
                 <div>
                   <p className="text-[13px] font-bold mb-1">Refresh Hub</p>
-                  <p className="text-[11px] text-white/40">Update All Data</p>
+                  <p className="text-[11px] text-white/40">Sync system data</p>
                 </div>
                 <span className="transition-transform group-hover:rotate-180 duration-500">↻</span>
               </button>
