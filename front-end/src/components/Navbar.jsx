@@ -186,21 +186,8 @@ const Navbar = () => {
           <div className="flex items-center justify-between h-[60px]">
 
             {/* ── LOGO ────────────────────────────────────────────────── */}
-<<<<<<< HEAD
-            <Link to="/" onClick={() => setMobileOpen(false)}>
+            <Link to={logoTarget} onClick={() => setMobileOpen(false)}>
               <Logo size="md" />
-=======
-            <Link to={logoTarget} className="flex items-center gap-2 group" onClick={() => { setMobileOpen(false); setUserMenuOpen(false); }}>
-              {/* orb dot */}
-              <div
-                className="w-7 h-7 rounded-full flex-shrink-0"
-                style={{
-                  background: 'radial-gradient(circle at 35% 35%, #ffe066, #ffd700 55%, #b8860b)',
-                  boxShadow: '0 0 14px rgba(255,215,0,0.5)',
-                }}
-              />
-              <span className="text-xl font-bold logo-shimmer tracking-tight">Botify</span>
->>>>>>> 9fd76ba26d41fa794605a597c5584818b81b05a0
             </Link>
 
             {/* ── DESKTOP NAV LINKS ───────────────────────────────────── */}

@@ -170,14 +170,14 @@ const BuyerDashboard = () => {
               <p className="text-[13px] font-bold mb-1">{t('buyer.browseMarketplace')}</p>
               <p className="text-[11px] text-white/40">Discover elite bots</p>
             </div>
-            <span className="transition-transform group-hover:translate-x-1">→</span>
+            <span className="transition-transform group-hover:translate-x-1">&rarr;</span>
           </Link>
           <Link to="/email-bot" className="glass-card p-5 group flex items-center justify-between hover:border-[#ffd700]/40">
             <div>
               <p className="text-[13px] font-bold mb-1">Email Bot Manager</p>
               <p className="text-[11px] text-white/40">Automated responses</p>
             </div>
-            <span className="transition-transform group-hover:translate-x-1">→</span>
+            <span className="transition-transform group-hover:translate-x-1">&rarr;</span>
           </Link>
           <Link to="/email-forwarding" className="glass-card p-5 group flex items-center justify-between hover:border-indigo-500/40">
             <div>
@@ -257,7 +257,7 @@ const BuyerDashboard = () => {
                        <div className="text-[11px] font-mono text-[#ffd700] bg-[#ffd700]/5 px-2 py-1 rounded-md border border-[#ffd700]/10">
                          ${parseFloat(purchase.amount).toFixed(2)}
                        </div>
-                       <span className="text-[9px] font-bold text-white/20 group-hover:text-white/40 uppercase tracking-widest transition-colors">Access →</span>
+                       <span className="text-[9px] font-bold text-white/20 group-hover:text-white/40 uppercase tracking-widest transition-colors">Access &rarr;</span>
                     </div>
                   </button>
                 );
@@ -307,7 +307,7 @@ const BuyerDashboard = () => {
                               <p className="text-xs font-bold text-white mb-1">Source Manifesto</p>
                               <p className="text-[10px] text-white/30 uppercase tracking-widest">Download Node Configuration</p>
                            </div>
-                           <span className="text-[#ffd700] transition-transform group-hover:translate-x-1">LINK →</span>
+                           <span className="text-[#ffd700] transition-transform group-hover:translate-x-1">LINK &rarr;</span>
                         </a>
                       )}
                       
@@ -320,7 +320,7 @@ const BuyerDashboard = () => {
                                    <p className="text-xs font-bold text-white mb-1 uppercase tracking-tighter">{link.label || 'Satellite Asset'}</p>
                                    <p className="text-[10px] text-white/30 uppercase tracking-widest truncate max-w-[200px]">{link.url}</p>
                                 </div>
-                                <span className="text-[#ffd700] transition-transform group-hover:translate-x-1">VIEW →</span>
+                                <span className="text-[#ffd700] transition-transform group-hover:translate-x-1">VIEW &rarr;</span>
                              </a>
                            ))}
                         </div>

@@ -177,7 +177,7 @@ const SellerDashboard = () => {
                   <p className="text-[13px] font-bold mb-1">Email Bots</p>
                   <p className="text-[11px] text-white/40">Control Panel</p>
                 </div>
-                <span className="transition-transform group-hover:translate-x-1">→</span>
+                <span className="transition-transform group-hover:translate-x-1">&rarr;</span>
               </Link>
               <Link to="/email-forwarding" className="glass-card p-5 group flex items-center justify-between hover:border-indigo-500/40">
                 <div>
@@ -191,7 +191,7 @@ const SellerDashboard = () => {
                   <p className="text-[13px] font-bold mb-1">Manifest Agent</p>
                   <p className="text-[11px] text-white/40">Launch Revenue</p>
                 </div>
-                <span className="transition-transform group-hover:translate-x-1">→</span>
+                <span className="transition-transform group-hover:translate-x-1">&rarr;</span>
               </Link>
               <button onClick={() => { fetchBots(); fetchListings(); }} className="glass-card p-5 group flex items-center justify-between hover:border-[#ffd700]/40">
                 <div>
