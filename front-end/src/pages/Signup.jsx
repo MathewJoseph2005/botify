@@ -1,6 +1,7 @@
 import { useState, memo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authAPI } from '../utils/api';
+import { useLanguage } from '../context/LanguageContext';
 import FluidOrb from '../components/FluidOrb';
 import Logo from '../components/Logo';
 
@@ -114,6 +115,7 @@ const SIGNUP_STYLES = `
 
 const Signup = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     name: '', email: '', password: '', confirmPassword: '', phone: '', role: 'buyer',
   });
@@ -196,8 +198,8 @@ const Signup = () => {
                   style={{ background: 'linear-gradient(135deg,rgba(255,215,0,0.15),rgba(255,215,0,0.05))', border: '1px solid rgba(255,215,0,0.25)' }}>
                   <span className="text-xl">🚀</span>
                 </div>
-                <h1 className="text-2xl font-bold tracking-tight text-white mb-1">Create your account</h1>
-                <p className="text-[13px] text-white/40">Join thousands automating with Botify</p>
+                <h1 className="text-2xl font-bold tracking-tight text-white mb-1">{t('signup.title')}</h1>
+                <p className="text-[13px] text-white/40">{t('signup.subtitle')}</p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -209,14 +211,14 @@ const Signup = () => {
                 )}
 
                 <div className="fade-up fade-up-2">
-                  <label className="block text-[11px] font-semibold uppercase tracking-widest text-white/40 mb-2">Full Name</label>
+                  <label className="block text-[11px] font-semibold uppercase tracking-widest text-white/40 mb-2">{t('signup.fullName')}</label>
                   <input id="name" name="name" type="text" required value={formData.name} onChange={handleChange}
                     onFocus={() => setFocusedField('name')} onBlur={() => setFocusedField(null)}
                     className={inputCls('name')} placeholder="John Doe" />
                 </div>
 
                 <div className="fade-up fade-up-2">
-                  <label className="block text-[11px] font-semibold uppercase tracking-widest text-white/40 mb-2">Email Address</label>
+                  <label className="block text-[11px] font-semibold uppercase tracking-widest text-white/40 mb-2">{t('signup.emailLabel')}</label>
                   <input id="email" name="email" type="email" required value={formData.email} onChange={handleChange}
                     onFocus={() => setFocusedField('email')} onBlur={() => setFocusedField(null)}
                     className={inputCls('email')} placeholder="you@example.com" />
@@ -224,7 +226,7 @@ const Signup = () => {
 
                 <div className="fade-up fade-up-2">
                   <label className="block text-[11px] font-semibold uppercase tracking-widest text-white/40 mb-2">
-                    Phone <span className="normal-case text-white/25 tracking-normal">(optional)</span>
+                    {t('signup.phone')} <span className="normal-case text-white/25 tracking-normal">{t('signup.phoneOptional')}</span>
                   </label>
                   <input id="phone" name="phone" type="tel" value={formData.phone} onChange={handleChange}
                     onFocus={() => setFocusedField('phone')} onBlur={() => setFocusedField(null)}
@@ -232,12 +234,12 @@ const Signup = () => {
                 </div>
 
                 <div className="fade-up fade-up-2">
-                  <label className="block text-[11px] font-semibold uppercase tracking-widest text-white/40 mb-2">I want to</label>
+                  <label className="block text-[11px] font-semibold uppercase tracking-widest text-white/40 mb-2">{t('signup.iWantTo')}</label>
                   <div className="flex gap-3">
                     <button type="button" className={`role-pill${formData.role === 'buyer' ? ' active' : ''}`}
-                      onClick={() => setFormData({ ...formData, role: 'buyer' })}>🛒 Buy Bots</button>
+                      onClick={() => setFormData({ ...formData, role: 'buyer' })}>🛒 {t('signup.buyBots')}</button>
                     <button type="button" className={`role-pill${formData.role === 'seller' ? ' active' : ''}`}
-                      onClick={() => setFormData({ ...formData, role: 'seller' })}>💼 Sell Bots</button>
+                      onClick={() => setFormData({ ...formData, role: 'seller' })}>💼 {t('signup.sellBots')}</button>
                   </div>
                   <select name="role" value={formData.role} onChange={handleChange} style={{ display: 'none' }}>
                     <option value="buyer">buyer</option>
@@ -246,14 +248,14 @@ const Signup = () => {
                 </div>
 
                 <div className="fade-up fade-up-2">
-                  <label className="block text-[11px] font-semibold uppercase tracking-widest text-white/40 mb-2">Password</label>
+                  <label className="block text-[11px] font-semibold uppercase tracking-widest text-white/40 mb-2">{t('signup.passwordLabel')}</label>
                   <input id="password" name="password" type="password" required value={formData.password} onChange={handleChange}
                     onFocus={() => setFocusedField('password')} onBlur={() => setFocusedField(null)}
                     className={inputCls('password')} placeholder="••••••••" />
                 </div>
 
                 <div className="fade-up fade-up-2">
-                  <label className="block text-[11px] font-semibold uppercase tracking-widest text-white/40 mb-2">Confirm Password</label>
+                  <label className="block text-[11px] font-semibold uppercase tracking-widest text-white/40 mb-2">{t('signup.confirmPassword')}</label>
                   <input id="confirmPassword" name="confirmPassword" type="password" required value={formData.confirmPassword} onChange={handleChange}
                     onFocus={() => setFocusedField('confirmPassword')} onBlur={() => setFocusedField(null)}
                     className={inputCls('confirmPassword')} placeholder="••••••••" />
@@ -273,19 +275,19 @@ const Signup = () => {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                         </svg>
-                        Creating account…
+                        {t('signup.creatingAccount')}
                       </span>
                     )}
-                    {submitState === 'success' && <span className="flex items-center justify-center gap-2">✓ Account created!</span>}
-                    {submitState === 'error' && <span>Please try again</span>}
-                    {submitState === 'idle' && 'Create Account'}
+                    {submitState === 'success' && <span className="flex items-center justify-center gap-2">✓ {t('signup.accountCreated')}</span>}
+                    {submitState === 'error' && <span>{t('signup.pleaseTryAgain')}</span>}
+                    {submitState === 'idle' && t('signup.createAccount')}
                   </button>
                 </div>
 
                 <p className="text-center text-[13px] text-white/40 fade-up fade-up-3">
-                  Already have an account?{' '}
+                  {t('signup.alreadyHaveAccount')}{' '}
                   <Link to="/login" className="font-semibold text-[#ffd700]/80 hover:text-[#ffd700] transition-colors">
-                    Sign in
+                    {t('signup.signIn')}
                   </Link>
                 </p>
               </form>
@@ -315,12 +317,12 @@ const Signup = () => {
 
           {/* Branding */}
           <div className="absolute bottom-16 left-0 right-0 text-center px-12">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-white/25 mb-3">Join</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-white/25 mb-3">{t('signup.join')}</p>
             <div className="flex justify-center mb-4">
               <Logo size="lg" />
             </div>
             <p className="text-[13px] text-white/35 leading-relaxed max-w-xs mx-auto">
-              Deploy bots across WhatsApp, Telegram &amp; Discord — all from one marketplace.
+              {t('signup.tagline')}
             </p>
             <div className="flex justify-center gap-8 mt-8">
               {[['500+', 'Bots'], ['10K+', 'Users'], ['99.9%', 'Uptime']].map(([val, lbl]) => (

@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { authAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import RoleSelectModal from '../components/RoleSelectModal';
 import FluidOrb from '../components/FluidOrb';
 import Logo from '../components/Logo';
@@ -150,15 +151,15 @@ const SuccessPortal = ({ userName }) => {
         {/* Welcome text */}
         <div className="welcome-in text-center mt-8">
           <p style={{ fontSize:11, fontWeight:700, letterSpacing:'0.3em', textTransform:'uppercase', color:'rgba(255,215,0,0.5)', marginBottom:8 }}>
-            Authenticated
+            {tl('login.authenticated')}
           </p>
           <h2 style={{ fontSize:26, fontWeight:700, color:'#fff', letterSpacing:'-0.02em', marginBottom:4 }}>
-            Welcome back{userName ? ',\u00a0' : '!'}
+            {tl('login.welcomeBack')}{userName ? ',\u00a0' : '!'}
             {userName && <span style={{ color:'#ffd700' }}>{userName.split(' ')[0]}</span>}
             {userName && '!'}
           </h2>
           <p style={{ fontSize:13, color:'rgba(255,255,255,0.35)', marginBottom:24 }}>
-            Taking you to your dashboard…
+            {tl('login.redirecting')}
           </p>
           {/* Staggered loading dots */}
           <div style={{ display:'flex', justifyContent:'center', gap:8 }}>
@@ -311,6 +312,7 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
+  const { t: tl } = useLanguage();
   const successMessage = location.state?.message;
 
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -461,12 +463,12 @@ const Login = () => {
 
           {/* Branding below orb */}
           <div className="absolute bottom-16 left-0 right-0 text-center px-12">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-white/25 mb-3">Powered by</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-white/25 mb-3">{tl('login.poweredBy')}</p>
             <div className="flex justify-center mb-4">
               <Logo size="lg" />
             </div>
             <p className="text-[13px] text-white/35 leading-relaxed max-w-xs mx-auto">
-              The next-generation bot marketplace for WhatsApp, Telegram &amp; Discord.
+              {tl('login.tagline')}
             </p>
 
             {/* stats row */}
@@ -504,8 +506,8 @@ const Login = () => {
                   style={{ background: 'linear-gradient(135deg,rgba(255,215,0,0.15),rgba(255,215,0,0.05))', border: '1px solid rgba(255,215,0,0.25)' }}>
                   <span className="text-xl">🤖</span>
                 </div>
-                <h1 className="text-2xl font-bold tracking-tight text-white mb-1">Welcome back</h1>
-                <p className="text-[13px] text-white/40">Sign in to your Botify account</p>
+                <h1 className="text-2xl font-bold tracking-tight text-white mb-1">{tl('login.title')}</h1>
+                <p className="text-[13px] text-white/40">{tl('login.subtitle')}</p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
@@ -527,7 +529,7 @@ const Login = () => {
                 {/* Email */}
                 <div className="fade-up fade-up-2">
                   <label className="block text-[11px] font-semibold uppercase tracking-widest text-white/40 mb-2">
-                    Email Address
+                    {tl('login.emailLabel')}
                   </label>
                   <input id="email" name="email" type="email" required
                     value={formData.email} onChange={handleChange}
@@ -541,7 +543,7 @@ const Login = () => {
                 {/* Password */}
                 <div className="fade-up fade-up-2">
                   <label className="block text-[11px] font-semibold uppercase tracking-widest text-white/40 mb-2">
-                    Password
+                    {tl('login.passwordLabel')}
                   </label>
                   <input id="password" name="password" type="password" required
                     value={formData.password} onChange={handleChange}
@@ -556,11 +558,11 @@ const Login = () => {
                 <div className="flex items-center justify-between fade-up fade-up-2">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input id="remember-me" type="checkbox" className="w-4 h-4 rounded accent-[#ffd700]" />
-                    <span className="text-[12px] text-white/40">Remember me</span>
+                    <span className="text-[12px] text-white/40">{tl('login.rememberMe')}</span>
                   </label>
                   <Link to="/forgot-password"
                     className="text-[12px] font-semibold text-[#ffd700]/80 hover:text-[#ffd700] transition-colors">
-                    Forgot password?
+                    {tl('login.forgotPassword')}
                   </Link>
                 </div>
 
@@ -579,12 +581,12 @@ const Login = () => {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                         </svg>
-                        Signing in…
+                        {tl('login.signingIn')}
                       </span>
                     )}
-                    {submitState === 'success' && <span className="flex items-center justify-center gap-2">✓ Welcome back!</span>}
-                    {submitState === 'error' && <span>Try again</span>}
-                    {submitState === 'idle' && 'Sign In'}
+                    {submitState === 'success' && <span className="flex items-center justify-center gap-2">✓ {tl('login.welcomeBack')}!</span>}
+                    {submitState === 'error' && <span>{tl('login.tryAgain')}</span>}
+                    {submitState === 'idle' && tl('login.signIn')}
                   </button>
                 </div>
 
@@ -602,9 +604,9 @@ const Login = () => {
 
                 {/* Sign up link */}
                 <p className="text-center text-[13px] text-white/40 fade-up fade-up-3">
-                  Don't have an account?{' '}
+                  {tl('login.noAccount')}{' '}
                   <Link to="/signup" className="font-semibold text-[#ffd700]/80 hover:text-[#ffd700] transition-colors">
-                    Sign up
+                    {tl('login.signUp')}
                   </Link>
                 </p>
               </form>
