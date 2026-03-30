@@ -86,6 +86,7 @@ export const marketplaceAPI = {
   // Seller endpoints
   createListing: (data) => api.post('/marketplace/create', data),
   getMyListings: () => api.get('/marketplace/my-listings'),
+  getListing: (id) => api.get(`/marketplace/my-listing/${id}`),
   updateListing: (id, data) => api.put(`/marketplace/update/${id}`, data),
   deleteListing: (id) => api.delete(`/marketplace/delete/${id}`),
   publishListing: (id, publish) => api.patch(`/marketplace/publish/${id}`, { publish }),
@@ -95,6 +96,7 @@ export const marketplaceAPI = {
   getDetails: (id) => api.get(`/marketplace/details/${id}`),
   purchase: (id) => api.post(`/marketplace/purchase/${id}`),
   getMyPurchases: () => api.get('/marketplace/my-purchases'),
+  getBotAccess: (id) => api.get(`/marketplace/bot/${id}/access`),
 };
 
 // Payments API

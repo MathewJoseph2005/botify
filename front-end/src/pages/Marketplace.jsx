@@ -30,6 +30,7 @@ const Marketplace = () => {
   const [selectedBot, setSelectedBot] = useState(null);
   const [checkoutModal, setCheckoutModal] = useState({ open: false, bot: null });
   const [purchasedBotIds, setPurchasedBotIds] = useState([]); // Track purchased bots
+  const [resourceModal, setResourceModal] = useState({ open: false, bot: null, loading: false, resource: null });
 
   // Filters
   const [platform, setPlatform] = useState('');
@@ -100,6 +101,19 @@ const Marketplace = () => {
     setSuccess('🎉 Purchase completed successfully!');
     fetchListings();
     setTimeout(() => setSuccess(''), 5000);
+  };
+
+  const handleViewResources = async (bot) => {
+    try {
+      setResourceModal({ open: true, bot, loading: true, resource: null });
+      const res = await marketplaceAPI.getBotAccess(bot.id);
+      if (res.data.success) {
+        setResourceModal({ open: true, bot, loading: false, resource: res.data.bot });
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to load bot resources.');
+      setResourceModal({ ...resourceModal, loading: false });
+    }
   };
 
   const getPlatformInfo = (val) => PLATFORMS.find((p) => p.value === val) || { label: val, icon: '🤖' };
@@ -370,10 +384,10 @@ const Marketplace = () => {
                   </span>
                   {purchasedBotIds.includes(selectedBot.id) ? (
                     <button
-                      disabled
-                      className="px-6 py-3 bg-green-600 text-white rounded-lg transition font-medium cursor-not-allowed flex items-center gap-2"
+                      onClick={() => handleViewResources(selectedBot)}
+                      className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition font-medium flex items-center gap-2"
                     >
-                      ✓ Already Purchased
+                      ✓ View Resources
                     </button>
                   ) : (
                     <button
@@ -398,6 +412,97 @@ const Marketplace = () => {
             onClose={() => setCheckoutModal({ open: false, bot: null })}
             onSuccess={handleCheckoutSuccess}
           />
+        )}
+
+        {/* Bot Resources Modal (Script & GitHub Link) */}
+        {resourceModal.open && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-auto">
+              <div className="p-6">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900">Bot Resources & Configuration</h2>
+                  <button
+                    onClick={() => setResourceModal({ ...resourceModal, open: false })}
+                    className="text-2xl leading-none hover:text-gray-600"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Content */}
+                {resourceModal.loading ? (
+                  <div className="text-center py-8">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                    <p className="text-gray-600 mt-2">Loading resources...</p>
+                  </div>
+                ) : resourceModal.resource ? (
+                  <div className="space-y-6">
+                    {/* Bot Script */}
+                    {resourceModal.resource.bot_script && (
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Bot Script</h3>
+                        <div className="bg-gray-900 text-gray-100 p-4 rounded-lg font-mono text-sm overflow-auto max-h-64">
+                          <pre>{resourceModal.resource.bot_script}</pre>
+                        </div>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(resourceModal.resource.bot_script);
+                            alert('Script copied to clipboard!');
+                          }}
+                          className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                        >
+                          📋 Copy Script
+                        </button>
+                      </div>
+                    )}
+
+                    {/* GitHub Link */}
+                    {resourceModal.resource.github_link && (
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">GitHub Repository</h3>
+                        <a
+                          href={resourceModal.resource.github_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700"
+                        >
+                          🔗 Open GitHub
+                          <span>→</span>
+                        </a>
+                      </div>
+                    )}
+
+                    {/* Configuration */}
+                    {resourceModal.resource.config_json && (
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Configuration (JSON)</h3>
+                        <div className="bg-gray-50 p-4 rounded-lg font-mono text-sm overflow-auto max-h-64 border border-gray-200">
+                          <pre>{JSON.stringify(resourceModal.resource.config_json, null, 2)}</pre>
+                        </div>
+                      </div>
+                    )}
+
+                    {!resourceModal.resource.bot_script && !resourceModal.resource.github_link && (
+                      <p className="text-gray-600">No resources available for this bot yet.</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-gray-600">Failed to load resources.</p>
+                )}
+
+                {/* Close Button */}
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => setResourceModal({ ...resourceModal, open: false })}
+                    className="px-6 py-2 border text-gray-700 rounded-lg hover:bg-gray-50"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

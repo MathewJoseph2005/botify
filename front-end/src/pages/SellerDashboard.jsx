@@ -242,7 +242,7 @@ const SellerDashboard = () => {
                   Email Forwarding
                 </Link>
                 <Link
-                  to="/email-bot"
+                  to="/bot-creation"
                   className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition text-sm font-medium"
                 >
                   + Create Bot

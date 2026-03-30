@@ -1,0 +1,53 @@
+{
+  "nav": {
+    "about": "About",
+    "contact": "Contact",
+    "faq": "FAQ",
+    "marketplace": "Marketplace",
+    "dashboard": "Dashboard",
+    "logout": "Logout",
+    "login": "Login",
+    "signup": "Sign up"
+  },
+  "home": {
+    "title": "Elevate Your Conversation.",
+    "subtitle": "Automate Your Success.",
+    "headline": "Unlock the full potential of autonomous communication. Buy, sell, and deploy high-performance bots across WhatsApp, Telegram, and Discord—all from one liquid-smooth marketplace.",
+    "speed": "Ultra-Low Latency",
+    "speedDesc": "< 200ms message response.",
+    "governance": "Role-Based Command",
+    "governanceDesc": "Full RBAC permission control.",
+    "insights": "Real-Time Data Streams",
+    "insightsDesc": "Track every interaction live.",
+    "capacity": "Infinite Session Scaling",
+    "capacityDesc": "Run 1,000+ bots concurrently.",
+    "assistance": "AI-Powered Debugging",
+    "assistanceDesc": "Auto-healing for broken sessions.",
+    "roadmap": "Agentic AI Marketplace",
+    "roadmapDesc": "Next-gen autonomous agents."
+  },
+  "faq": {
+    "title": "Frequently Asked Questions",
+    "subtitle": "Everything you need to know about Botify",
+    "q1": "What is Botify?",
+    "a1": "Botify is a multi-messaging bot marketplace where you can create, buy, and sell autonomous bots for WhatsApp, Telegram, Discord, Email, Slack, and Instagram.",
+    "q2": "How do I create a bot?",
+    "a2": "Sign up as a Seller, go to the Dashboard, click 'Create New Bot', select your platform (Email, WhatsApp, Telegram, etc.), and fill in the platform-specific configuration. Each platform has different setup steps.",
+    "q3": "Can I sell my bots?",
+    "a3": "Yes! Once you create a bot, you can publish it to the marketplace with a custom price. Buyers can then purchase and access your bot with all its configurations and scripts.",
+    "q4": "What platforms are supported?",
+    "a4": "Currently, Botify supports: Email, WhatsApp, Telegram, Discord, Slack, and Instagram. More platforms are coming soon.",
+    "q5": "How are payments handled?",
+    "a5": "Payments are processed securely through our payment system. When a buyer purchases your bot, funds are credited to your account after the transaction is completed.",
+    "q6": "Can I customize the bot behavior?",
+    "a6": "Absolutely! Each bot supports custom scripts and configurations. You can define response rules, templates, webhooks, and more depending on the platform.",
+    "q7": "Is there a free tier?",
+    "a7": "Yes, you can create bots for free. Selling bots on the marketplace is also free. We may introduce premium features in the future.",
+    "q8": "How secure are my bot credentials?",
+    "a8": "All sensitive data is encrypted and stored securely. You have full control over your bot credentials and can revoke access at any time.",
+    "q9": "Can I update my bot after publishing?",
+    "a9": "Yes! You can edit your bot details, update configurations, and modify scripts even after publishing. Changes take effect immediately.",
+    "q10": "What if I need help?",
+    "a10": "Check our documentation, contact support through the Contact page, or reach out to our team directly. We're here to help!"
+  }
+}

@@ -8,6 +8,7 @@ import marketplaceRoutes from './routes/marketplace.js';
 import paymentRoutes from './routes/payment.js';
 import telegramBotFactory from './services/telegramBotFactory.js';
 import emailForwardingService from './services/EmailForwardingService.js';
+import checkDatabaseSchema from './config/schema-check.js';
 import './config/database.js'; // Initialize Supabase connection
 
 // Load environment variables
@@ -101,6 +102,13 @@ const startServer = (port) => {
     console.log(`\n🚀 Botify Backend Server is running on port ${port}`);
     console.log(`📡 API available at http://localhost:${port}/api`);
     console.log(`🏥 Health check: http://localhost:${port}/api/health\n`);
+
+    // Check database schema
+    try {
+      await checkDatabaseSchema();
+    } catch (err) {
+      console.warn('⚠️  Schema check failed:', err.message);
+    }
 
     try {
       await telegramBotFactory.initialize();

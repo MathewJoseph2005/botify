@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 
 /* ── inline keyframes so the navbar needs zero extra CSS files ────────────── */
 const NAV_STYLES = `
@@ -88,6 +89,7 @@ const NAV_STYLES = `
 /* ── nav link items ───────────────────────────────────────────────────────── */
 const NAV_PUBLIC = [
   { to: '/marketplace', label: 'Marketplace', icon: '🛒' },
+  { to: '/faq', label: 'FAQ', icon: '❓' },
 ];
 const NAV_AUTH = [
   { to: '/dashboard', label: 'Dashboard', icon: '🎛️' },
@@ -123,9 +125,19 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, user, logout } = useAuth();
+  const { t, language, changeLanguage } = useLanguage();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [langMenuOpen, setLangMenuOpen] = useState(false);
+
+  const languages = [
+    { code: 'en', name: 'English', flag: '🇬🇧' },
+    { code: 'es', name: 'Español', flag: '🇪🇸' },
+    { code: 'hi', name: 'हिन्दी', flag: '🇮🇳' },
+    { code: 'ml', name: 'മലയാളം', flag: '🇮🇳' },
+    { code: 'ta', name: 'தமிழ்', flag: '🇮🇳' },
+  ];
 
   /* scroll detection */
   useEffect(() => {
@@ -269,6 +281,40 @@ const Navbar = () => {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
+                  {/* Language Selector */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setLangMenuOpen((v) => !v)}
+                      className="px-3 py-1.5 text-[13px] font-semibold text-white/60 hover:text-white transition-colors rounded-lg hover:bg-white/[0.06] flex items-center gap-1"
+                    >
+                      <span className="text-sm">{languages.find(l => l.code === language)?.flag}</span>
+                      {language.toUpperCase()}
+                    </button>
+                    {langMenuOpen && (
+                      <div
+                        className="absolute right-0 top-full mt-2 w-40 rounded-xl border border-white/10 shadow-2xl overflow-hidden mobile-open"
+                        style={{ background: 'rgba(15,15,15,0.95)', backdropFilter: 'blur(20px)' }}
+                      >
+                        {languages.map((lang) => (
+                          <button
+                            key={lang.code}
+                            onClick={() => {
+                              changeLanguage(lang.code);
+                              setLangMenuOpen(false);
+                            }}
+                            className={`w-full px-3 py-2 text-left text-[13px] flex items-center gap-2 transition-all ${
+                              language === lang.code
+                                ? 'text-[#ffd700] bg-white/[0.1]'
+                                : 'text-white/60 hover:text-white hover:bg-white/[0.06]'
+                            }`}
+                          >
+                            <span className="text-sm">{lang.flag}</span>
+                            {lang.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <Link
                     to="/login"
                     className="px-4 py-1.5 text-[13px] font-semibold text-white/60 hover:text-white transition-colors rounded-lg hover:bg-white/[0.06]"
