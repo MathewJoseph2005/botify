@@ -132,6 +132,7 @@ const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
+  const [userLangOpen, setUserLangOpen] = useState(false);
 
   const languages = [
     { code: 'en', name: 'English', flag: '🇬🇧' },
@@ -274,6 +275,45 @@ const Navbar = () => {
                         )}
                       </div>
 
+                      {/* language selector */}
+                      <div className="p-1.5 border-t border-white/[0.06]">
+                        <button
+                          onClick={() => setUserLangOpen((v) => !v)}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.07] transition-all"
+                        >
+                          <span>🌐</span>
+                          <span className="flex-1 text-left">{t('nav.language') || 'Language'}</span>
+                          <span className="text-xs text-white/40">{languages.find(l => l.code === language)?.flag} {language.toUpperCase()}</span>
+                          <svg
+                            className={`w-3 h-3 text-white/30 transition-transform duration-200 ${userLangOpen ? 'rotate-180' : ''}`}
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        {userLangOpen && (
+                          <div className="mt-1 ml-6 space-y-0.5">
+                            {languages.map((lang) => (
+                              <button
+                                key={lang.code}
+                                onClick={() => {
+                                  changeLanguage(lang.code);
+                                  setUserLangOpen(false);
+                                }}
+                                className={`w-full px-3 py-1.5 rounded-lg text-left text-[12px] flex items-center gap-2 transition-all ${
+                                  language === lang.code
+                                    ? 'text-[#ffd700] bg-white/[0.08]'
+                                    : 'text-white/50 hover:text-white hover:bg-white/[0.05]'
+                                }`}
+                              >
+                                <span className="text-sm">{lang.flag}</span>
+                                {lang.name}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
                       {/* logout */}
                       <div className="p-1.5 border-t border-white/[0.06]">
                         <button
@@ -401,6 +441,46 @@ const Navbar = () => {
                       <span className="role-badge">{roleLabel(user?.role_id)}</span>
                     </div>
                   </div>
+
+                  {/* mobile language selector (authenticated) */}
+                  <div className="mb-2">
+                    <button
+                      onClick={() => setUserLangOpen((v) => !v)}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[14px] font-medium text-white/60 hover:text-white hover:bg-white/[0.06] transition-all"
+                    >
+                      <span>🌐</span>
+                      <span className="flex-1 text-left">{t('nav.language') || 'Language'}</span>
+                      <span className="text-xs text-white/40">{languages.find(l => l.code === language)?.flag} {language.toUpperCase()}</span>
+                      <svg
+                        className={`w-3.5 h-3.5 text-white/30 transition-transform duration-200 ${userLangOpen ? 'rotate-180' : ''}`}
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {userLangOpen && (
+                      <div className="mt-1 ml-8 space-y-0.5">
+                        {languages.map((lang) => (
+                          <button
+                            key={lang.code}
+                            onClick={() => {
+                              changeLanguage(lang.code);
+                              setUserLangOpen(false);
+                            }}
+                            className={`w-full px-3 py-2 rounded-xl text-left text-[13px] flex items-center gap-2 transition-all ${
+                              language === lang.code
+                                ? 'text-[#ffd700] bg-[rgba(255,215,0,0.08)]'
+                                : 'text-white/50 hover:text-white hover:bg-white/[0.05]'
+                            }`}
+                          >
+                            <span className="text-sm">{lang.flag}</span>
+                            {lang.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   <button
                     onClick={handleLogout}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[14px] text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all"

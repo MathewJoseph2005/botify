@@ -2,6 +2,7 @@ import { useState, useEffect, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { botAPI, marketplaceAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import BotTable from '../components/BotTable';
 import ConfirmModal from '../components/ConfirmModal';
 import FluidOrb from '../components/FluidOrb';
@@ -49,6 +50,7 @@ const DASHBOARD_STYLES = `
 
 const SellerDashboard = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [bots, setBots] = useState([]);
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -70,7 +72,7 @@ const SellerDashboard = () => {
         setBots(response.data.bots);
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to fetch bots.');
+      setError(err.response?.data?.message || t('seller.errors.fetchBots'));
     } finally {
       setLoading(false);
     }
@@ -100,7 +102,7 @@ const SellerDashboard = () => {
         await fetchBots();
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete bot.');
+      setError(err.response?.data?.message || t('seller.errors.deleteBot'));
     }
   };
 
@@ -138,7 +140,7 @@ const SellerDashboard = () => {
           </button>
           <button onClick={() => setActiveTab('wallet')}
             className={`px-8 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${activeTab === 'wallet' ? 'bg-[#ffd700] text-[#050505]' : 'text-white/40 hover:text-white hover:bg-white/5'}`}>
-            Wallet & Earnings
+            Wallet &amp; Earnings
           </button>
         </div>
 
@@ -188,7 +190,7 @@ const SellerDashboard = () => {
               </Link>
               <Link to="/seller/create-bot" className="glass-card p-5 group flex items-center justify-between hover:border-[#ffd700]/40">
                 <div>
-                  <p className="text-[13px] font-bold mb-1">Manifest Agent</p>
+                  <p className="text-[13px] font-bold mb-1">Create Marketplace Bot</p>
                   <p className="text-[11px] text-white/40">Launch Revenue</p>
                 </div>
                 <span className="transition-transform group-hover:translate-x-1">&rarr;</span>
@@ -206,22 +208,17 @@ const SellerDashboard = () => {
             <div className="glass-card overflow-hidden fade-up" style={{ animationDelay: '0.3s' }}>
               <div className="px-6 py-5 border-b border-white/5 flex justify-between items-center">
                 <h2 className="text-sm font-semibold uppercase tracking-widest text-white/50">Deployment Portfolio</h2>
-                <div className="flex gap-3">
-                   <Link to="/email-forwarding" className="text-[10px] font-bold px-4 py-1.5 rounded-full border border-white/10 text-white/40 hover:text-white hover:bg-white/5 transition-all flex items-center gap-2">
-                     <span>📩</span> Forwarding
-                   </Link>
-                   <Link to="/email-bot" className="text-[10px] font-bold px-4 py-1.5 rounded-full bg-[#ffd700] text-[#050505] hover:scale-105 transition-all">
-                     + New Bot
-                   </Link>
-                </div>
+                <Link to="/seller/create-bot" className="text-[10px] font-bold px-4 py-1.5 rounded-full bg-[#ffd700] text-[#050505] hover:scale-105 transition-all">
+                  + Create Marketplace Bot
+                </Link>
               </div>
               <div className="p-2">
                 <BotTable
                   bots={bots}
                   loading={loading}
-                  emptyMessage="Ready to scale? Create your first automation bot."
-                  emptyLinkText="Launch First Bot"
-                  emptyLinkTo="/email-bot"
+                  emptyMessage="Ready to scale? Create your first marketplace bot."
+                  emptyLinkText="Create Marketplace Bot"
+                  emptyLinkTo="/seller/create-bot"
                   onDelete={handleDeleteBot}
                   showManage={true}
                 />
@@ -230,6 +227,7 @@ const SellerDashboard = () => {
           </>
         )}
 
+        {/* Wallet Dashboard Tab */}
         {activeTab === 'wallet' && (
           <div className="fade-up">
             <SellerWalletDashboard />
