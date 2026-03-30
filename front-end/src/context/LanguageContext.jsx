@@ -29,12 +29,14 @@ export const LanguageProvider = ({ children }) => {
   const t = (key) => {
     const keys = key.split('.');
     let value = translations[language];
+    let fallbackValue = translations.en;
 
     for (const k of keys) {
       value = value?.[k];
+      fallbackValue = fallbackValue?.[k];
     }
 
-    return value || key;
+    return value || fallbackValue || key;
   };
 
   const changeLanguage = (lang) => {
