@@ -10,6 +10,8 @@ const BuyerDashboard = () => {
   const [purchases, setPurchases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [accessModal, setAccessModal] = useState({ open: false, loading: false, bot: null, resource: null });
+  const [accessError, setAccessError] = useState('');
 
   useEffect(() => {
     fetchBots();
@@ -40,6 +42,31 @@ const BuyerDashboard = () => {
     } catch (err) {
       console.error('Failed to fetch purchases:', err);
       // silently fail for purchases
+    }
+  };
+
+  const handleViewPurchasedBot = async (purchase) => {
+    const bot = purchase?.marketplace_bots;
+    const botId = purchase?.marketplace_bot_id || bot?.id;
+
+    if (!botId) {
+      setError('Unable to open bot details. Missing bot id.');
+      return;
+    }
+
+    setAccessError('');
+    setAccessModal({ open: true, loading: true, bot, resource: null });
+
+    try {
+      const res = await marketplaceAPI.getBotAccess(botId);
+      if (res.data.success) {
+        setAccessModal({ open: true, loading: false, bot, resource: res.data.bot });
+      } else {
+        setAccessModal({ open: true, loading: false, bot, resource: null });
+      }
+    } catch (err) {
+      setAccessError(err.response?.data?.message || 'Failed to load purchased bot access details.');
+      setAccessModal({ open: true, loading: false, bot, resource: null });
     }
   };
 
@@ -126,7 +153,7 @@ const BuyerDashboard = () => {
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900">Quick Actions</h2>
           </div>
-          <div className="p-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
             <Link
               to="/email-forwarding"
               className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg transition duration-200 text-center"
@@ -138,12 +165,6 @@ const BuyerDashboard = () => {
               className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg transition duration-200 text-center"
             >
               Browse Marketplace
-            </Link>
-            <Link
-              to="/email-bot"
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition duration-200 text-center"
-            >
-              Email Bot Manager
             </Link>
             <button
               onClick={fetchBots}
@@ -221,8 +242,14 @@ const BuyerDashboard = () => {
               {purchases.map((purchase) => {
                 const bot = purchase.marketplace_bots;
                 const platformIcons = { email: '📧', whatsapp: '💬', telegram: '✈️', discord: '🎮', slack: '💼', instagram: '📸' };
+                const featureList = Array.isArray(bot?.features) ? bot.features : [];
                 return (
-                  <div key={purchase.id} className="p-6 hover:bg-gray-50">
+                  <button
+                    key={purchase.id}
+                    type="button"
+                    onClick={() => handleViewPurchasedBot(purchase)}
+                    className="w-full p-6 hover:bg-gray-50 text-left transition"
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <span className="text-2xl">{platformIcons[bot?.platform] || '🤖'}</span>
@@ -237,12 +264,171 @@ const BuyerDashboard = () => {
                         ${parseFloat(purchase.amount).toFixed(2)}
                       </span>
                     </div>
-                  </div>
+
+                    <div className="mt-3 ml-11">
+                      {bot?.description && (
+                        <p className="text-sm text-gray-700 mb-2">{bot.description}</p>
+                      )}
+
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        {bot?.category && (
+                          <span className="px-2 py-1 rounded bg-blue-50 text-blue-700 text-xs font-medium">
+                            {bot.category}
+                          </span>
+                        )}
+                        {bot?.status && (
+                          <span className="px-2 py-1 rounded bg-green-50 text-green-700 text-xs font-medium">
+                            {bot.status}
+                          </span>
+                        )}
+                      </div>
+
+                      {featureList.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {featureList.map((feature, idx) => (
+                            <span key={`${purchase.id}-feature-${idx}`} className="px-2 py-1 rounded bg-gray-100 text-gray-700 text-xs">
+                              {feature}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="mt-3">
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-purple-700 bg-purple-50 px-2 py-1 rounded">
+                          View access details
+                          <span aria-hidden="true">→</span>
+                        </span>
+                      </div>
+                    </div>
+                  </button>
                 );
               })}
             </div>
           )}
         </div>
+
+        {/* Purchased Bot Access Modal */}
+        {accessModal.open && (
+          <div
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => {
+              setAccessModal({ open: false, loading: false, bot: null, resource: null });
+              setAccessError('');
+            }}
+          >
+            <div
+              className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900">{accessModal.bot?.name || 'Purchased Bot'}</h3>
+                  <p className="text-sm text-gray-500">Access details provided by the seller</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setAccessModal({ open: false, loading: false, bot: null, resource: null });
+                    setAccessError('');
+                  }}
+                  className="text-gray-500 hover:text-gray-800 text-2xl leading-none"
+                >
+                  &times;
+                </button>
+              </div>
+
+              <div className="p-6 space-y-5">
+                {accessError && (
+                  <div className="px-4 py-3 rounded-lg border bg-red-50 border-red-200 text-red-700 text-sm">
+                    {accessError}
+                  </div>
+                )}
+
+                {accessModal.loading ? (
+                  <div className="py-8 text-center">
+                    <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600"></div>
+                    <p className="mt-3 text-sm text-gray-500">Loading bot details...</p>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900 mb-2">Description</h4>
+                      <p className="text-sm text-gray-700">
+                        {accessModal.bot?.description || 'No description provided.'}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {accessModal.bot?.category && (
+                        <span className="px-2 py-1 rounded bg-blue-50 text-blue-700 text-xs font-medium">
+                          {accessModal.bot.category}
+                        </span>
+                      )}
+                      {accessModal.bot?.status && (
+                        <span className="px-2 py-1 rounded bg-green-50 text-green-700 text-xs font-medium">
+                          {accessModal.bot.status}
+                        </span>
+                      )}
+                      <span className="px-2 py-1 rounded bg-gray-100 text-gray-700 text-xs font-medium">
+                        {accessModal.bot?.platform || accessModal.resource?.platform || 'unknown'}
+                      </span>
+                    </div>
+
+                    {Array.isArray(accessModal.bot?.features) && accessModal.bot.features.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-semibold text-gray-900 mb-2">Features</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {accessModal.bot.features.map((feature, idx) => (
+                            <span key={`modal-feature-${idx}`} className="px-2 py-1 rounded bg-gray-100 text-gray-700 text-xs">
+                              {feature}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900 mb-2">GitHub Link</h4>
+                      {accessModal.resource?.github_link ? (
+                        <a
+                          href={accessModal.resource.github_link}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sm text-blue-600 hover:text-blue-800 underline break-all"
+                        >
+                          {accessModal.resource.github_link}
+                        </a>
+                      ) : (
+                        <p className="text-sm text-gray-500">No GitHub link provided.</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900 mb-2">Script</h4>
+                      {accessModal.resource?.bot_script ? (
+                        <pre className="text-xs bg-gray-900 text-green-200 p-4 rounded-lg overflow-auto max-h-72 whitespace-pre-wrap">
+                          {accessModal.resource.bot_script}
+                        </pre>
+                      ) : (
+                        <p className="text-sm text-gray-500">No script provided.</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900 mb-2">Configuration</h4>
+                      {accessModal.resource?.config_json && Object.keys(accessModal.resource.config_json).length > 0 ? (
+                        <pre className="text-xs bg-gray-100 text-gray-800 p-4 rounded-lg overflow-auto max-h-72 whitespace-pre-wrap">
+                          {JSON.stringify(accessModal.resource.config_json, null, 2)}
+                        </pre>
+                      ) : (
+                        <p className="text-sm text-gray-500">No additional configuration provided.</p>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
