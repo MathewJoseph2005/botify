@@ -259,21 +259,7 @@ const BuyerDashboard = () => {
                        <span className="text-[9px] font-bold text-white/20 group-hover:text-white/40 uppercase tracking-widest transition-colors">Access →</span>
                     </div>
                   </button>
-                      </div>
-                      <div>
-                        <h3 className="text-xs font-bold text-white/90">{bot?.name || 'Bot Instance'}</h3>
-                        <p className="text-[10px] text-white/30 uppercase tracking-tighter mt-0.5">
-                          {bot?.platform} • {new Date(purchase.purchased_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <div className="text-[11px] font-mono text-[#ffd700] bg-[#ffd700]/5 px-2 py-1 rounded-md border border-[#ffd700]/10">
-                        ${parseFloat(purchase.amount).toFixed(2)}
-                      </div>
-                      <span className="text-[9px] font-bold text-white/20 group-hover:text-white/40 uppercase tracking-widest transition-colors">Access →</span>
-                    </div>
-                  </button>
+
                 );
               })}
             </div>
