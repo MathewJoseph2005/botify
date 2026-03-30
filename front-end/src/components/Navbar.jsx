@@ -88,14 +88,14 @@ const NAV_STYLES = `
 
 /* ── nav link items ───────────────────────────────────────────────────────── */
 const NAV_PUBLIC = [
-  { to: '/marketplace', label: 'Marketplace', icon: '🛒' },
-  { to: '/faq', label: 'FAQ', icon: '❓' },
+  { to: '/marketplace', labelKey: 'marketplace', icon: '🛒' },
+  { to: '/faq', labelKey: 'faq', icon: '❓' },
 ];
 const NAV_AUTH = [
-  { to: '/dashboard', label: 'Dashboard', icon: '🎛️', roles: [1, 2, 3] },
-  { to: '/email-bot', label: 'Email Bot', icon: '✉️', roles: [1, 2, 3] },
-  { to: '/whatsapp-bot', label: 'WhatsApp', icon: '📱', roles: [1, 2, 3] },
-  { to: '/email-forwarding', label: 'Forwarding', icon: '📨', roles: [2, 3] },
+  { to: '/dashboard', labelKey: 'dashboard', icon: '🎛️', roles: [1, 2, 3] },
+  { to: '/email-bot', labelKey: 'emailBot', icon: '✉️', roles: [1, 2, 3] },
+  { to: '/whatsapp-bot', labelKey: 'whatsapp', icon: '📱', roles: [1, 2, 3] },
+  { to: '/email-forwarding', labelKey: 'forwarding', icon: '📨', roles: [2, 3] },
 ];
 
 /* ── role label helper ───────────────────────────────────────────────────── */
@@ -162,6 +162,8 @@ const Navbar = () => {
     navigate('/');
   };
 
+  const logoTarget = isAuthenticated ? '/dashboard' : '/';
+
   const links = [
     ...NAV_PUBLIC,
     ...(isAuthenticated
@@ -181,7 +183,7 @@ const Navbar = () => {
           <div className="flex items-center justify-between h-[60px]">
 
             {/* ── LOGO ────────────────────────────────────────────────── */}
-            <Link to="/" className="flex items-center gap-2 group" onClick={() => setMobileOpen(false)}>
+            <Link to={logoTarget} className="flex items-center gap-2 group" onClick={() => { setMobileOpen(false); setUserMenuOpen(false); }}>
               {/* orb dot */}
               <div
                 className="w-7 h-7 rounded-full flex-shrink-0"
@@ -195,7 +197,7 @@ const Navbar = () => {
 
             {/* ── DESKTOP NAV LINKS ───────────────────────────────────── */}
             <div className="hidden md:flex items-center gap-1">
-              {links.map(({ to, label, icon }) => (
+              {links.map(({ to, labelKey, icon }) => (
                 <Link
                   key={to}
                   to={to}
@@ -206,7 +208,7 @@ const Navbar = () => {
                     }`}
                 >
                   <span className="text-[13px] leading-none">{icon}</span>
-                  {label}
+                  {t(`nav.${labelKey}`)}
                 </Link>
               ))}
             </div>
@@ -242,7 +244,7 @@ const Navbar = () => {
                     >
                       {/* user info header */}
                       <div className="px-4 py-3 border-b border-white/[0.06]">
-                        <p className="text-[12px] text-white/40 mb-0.5">Signed in as</p>
+                        <p className="text-[12px] text-white/40 mb-0.5">{t('nav.signedInAs')}</p>
                         <p className="text-[13px] font-semibold text-white truncate">{user?.name}</p>
                         <p className="text-[11px] text-white/30 truncate">{user?.email}</p>
                       </div>
@@ -253,26 +255,26 @@ const Navbar = () => {
                           to="/dashboard"
                           className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.07] transition-all"
                         >
-                          <span>🎛️</span> Dashboard
+                          <span>🎛️</span> {t('nav.dashboard')}
                         </Link>
                         <Link
                           to="/email-bot"
                           className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.07] transition-all"
                         >
-                          <span>✉️</span> Email Bot
+                          <span>✉️</span> {t('nav.emailBot')}
                         </Link>
                         <Link
                           to="/whatsapp-bot"
                           className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.07] transition-all"
                         >
-                          <span>📱</span> WhatsApp Bot
+                          <span>📱</span> {t('nav.whatsapp')}
                         </Link>
                         {(user?.role_id === 2 || user?.role_id === 3) && (
                           <Link
                             to="/email-forwarding"
                             className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.07] transition-all"
                           >
-                            <span>📨</span> Forwarding Bot
+                            <span>📨</span> {t('nav.forwarding')}
                           </Link>
                         )}
                       </div>
@@ -287,7 +289,7 @@ const Navbar = () => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                               d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                           </svg>
-                          Sign out
+                          {t('nav.signOut')}
                         </button>
                       </div>
                     </div>
@@ -333,7 +335,7 @@ const Navbar = () => {
                     to="/login"
                     className="px-4 py-1.5 text-[13px] font-semibold text-white/60 hover:text-white transition-colors rounded-lg hover:bg-white/[0.06]"
                   >
-                    Log in
+                    {t('nav.login')}
                   </Link>
                   <Link
                     to="/signup"
@@ -343,7 +345,7 @@ const Navbar = () => {
                       boxShadow: '0 0 18px rgba(255,215,0,0.35)',
                     }}
                   >
-                    Get started
+                    {t('nav.signup')}
                   </Link>
                 </div>
               )}
@@ -375,7 +377,7 @@ const Navbar = () => {
             style={{ background: 'rgba(8,8,8,0.97)', backdropFilter: 'blur(20px)' }}
           >
             <div className="px-4 py-3 space-y-1">
-              {links.map(({ to, label, icon }) => (
+              {links.map(({ to, labelKey, icon }) => (
                 <Link
                   key={to}
                   to={to}
@@ -387,7 +389,7 @@ const Navbar = () => {
                     }`}
                 >
                   <span className="text-base">{icon}</span>
-                  {label}
+                  {t(`nav.${labelKey}`)}
                 </Link>
               ))}
             </div>
@@ -412,7 +414,7 @@ const Navbar = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                         d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                     </svg>
-                    Sign out
+                    {t('nav.signOut')}
                   </button>
                 </>
               ) : (
@@ -422,7 +424,7 @@ const Navbar = () => {
                     onClick={() => setMobileOpen(false)}
                     className="flex items-center justify-center py-2.5 px-4 rounded-xl text-[14px] font-semibold text-white/70 border border-white/10 hover:text-white hover:bg-white/[0.06] transition-all"
                   >
-                    Log in
+                    {t('nav.login')}
                   </Link>
                   <Link
                     to="/signup"
@@ -433,7 +435,7 @@ const Navbar = () => {
                       boxShadow: '0 0 18px rgba(255,215,0,0.3)',
                     }}
                   >
-                    Get started
+                    {t('nav.signup')}
                   </Link>
                 </div>
               )}

@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { botAPI, marketplaceAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import BotTable from '../components/BotTable';
 
 const BuyerDashboard = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [bots, setBots] = useState([]);
   const [purchases, setPurchases] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -76,8 +78,8 @@ const BuyerDashboard = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Buyer Dashboard</h1>
-          <p className="text-gray-600 mt-2">Welcome back, {user?.name}!</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t('buyer.title')}</h1>
+          <p className="text-gray-600 mt-2">{t('buyer.welcome')}, {user?.name}!</p>
         </div>
 
         {error && (
@@ -94,7 +96,7 @@ const BuyerDashboard = () => {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">My Bots</p>
+                <p className="text-sm text-gray-600">{t('buyer.myBots')}</p>
                 <p className="text-2xl font-bold text-gray-900">{bots.length}</p>
               </div>
               <div className="bg-blue-100 p-3 rounded-lg">
@@ -108,7 +110,7 @@ const BuyerDashboard = () => {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Active Bots</p>
+                <p className="text-sm text-gray-600">{t('buyer.activeBots')}</p>
                 <p className="text-2xl font-bold text-gray-900">{activeBots}</p>
               </div>
               <div className="bg-green-100 p-3 rounded-lg">
@@ -122,7 +124,7 @@ const BuyerDashboard = () => {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Purchased Bots</p>
+                <p className="text-sm text-gray-600">{t('buyer.purchasedBots')}</p>
                 <p className="text-2xl font-bold text-purple-600">{purchases.length}</p>
               </div>
               <div className="bg-purple-100 p-3 rounded-lg">
@@ -136,7 +138,7 @@ const BuyerDashboard = () => {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Inactive Bots</p>
+                <p className="text-sm text-gray-600">{t('buyer.inactiveBots')}</p>
                 <p className="text-2xl font-bold text-gray-900">{bots.length - activeBots}</p>
               </div>
               <div className="bg-yellow-100 p-3 rounded-lg">
@@ -151,20 +153,20 @@ const BuyerDashboard = () => {
         {/* Quick Actions */}
         <div className="bg-white rounded-lg shadow mb-8">
           <div className="p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">Quick Actions</h2>
+            <h2 className="text-xl font-semibold text-gray-900">{t('buyer.quickActions')}</h2>
           </div>
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <Link
               to="/marketplace"
               className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg transition duration-200 text-center"
             >
-              Browse Marketplace
+              {t('buyer.browseMarketplace')}
             </Link>
             <button
               onClick={fetchBots}
               className="bg-yellow-600 hover:bg-yellow-700 text-white px-6 py-3 rounded-lg transition duration-200"
             >
-              Refresh Bots
+              {t('buyer.refreshBots')}
             </button>
           </div>
         </div>
@@ -173,20 +175,20 @@ const BuyerDashboard = () => {
         <div className="bg-white rounded-lg shadow">
           <div className="p-6 border-b border-gray-200">
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-gray-900">My Bots</h2>
+              <h2 className="text-xl font-semibold text-gray-900">{t('buyer.myBots')}</h2>
               <div className="flex gap-2">
                 <Link
                   to="/email-forwarding"
                   className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition text-sm flex items-center gap-1 font-medium"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                  Email Forwarding
+                  {t('buyer.emailForwarding')}
                 </Link>
                 <Link
                   to="/email-bot"
                   className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition text-sm font-medium"
                 >
-                  + Create Bot
+                  {t('buyer.createBot')}
                 </Link>
               </div>
             </div>
@@ -211,24 +213,24 @@ const BuyerDashboard = () => {
         <div className="bg-white rounded-lg shadow mt-8">
           <div className="p-6 border-b border-gray-200">
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-gray-900">Purchased from Marketplace</h2>
+              <h2 className="text-xl font-semibold text-gray-900">{t('buyer.purchasedFromMarketplace')}</h2>
               <Link
                 to="/marketplace"
                 className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition text-sm"
               >
-                Browse Marketplace
+                {t('buyer.browseMarketplace')}
               </Link>
             </div>
           </div>
 
           {purchases.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
-              <p className="mb-4">No marketplace purchases yet.</p>
+              <p className="mb-4">{t('buyer.noPurchases')}</p>
               <Link
                 to="/marketplace"
                 className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition"
               >
-                Explore the Marketplace
+                {t('buyer.exploreMarketplace')}
               </Link>
             </div>
           ) : (
@@ -289,7 +291,7 @@ const BuyerDashboard = () => {
 
                       <div className="mt-3">
                         <span className="inline-flex items-center gap-1 text-xs font-medium text-purple-700 bg-purple-50 px-2 py-1 rounded">
-                          View access details
+                          {t('buyer.viewAccessDetails')}
                           <span aria-hidden="true">→</span>
                         </span>
                       </div>
@@ -340,7 +342,7 @@ const BuyerDashboard = () => {
                 {accessModal.loading ? (
                   <div className="py-8 text-center">
                     <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600"></div>
-                    <p className="mt-3 text-sm text-gray-500">Loading bot details...</p>
+                    <p className="mt-3 text-sm text-gray-500">{t('buyer.loadingBotDetails')}</p>
                   </div>
                 ) : (
                   <>
