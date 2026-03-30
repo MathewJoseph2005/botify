@@ -102,7 +102,7 @@ function App() {
           <Route
             path="/email-forwarding"
             element={
-              <PrivateRoute allowedRoles={[2]}>
+              <PrivateRoute allowedRoles={[2, 3]}>
                 <EmailForwarding />
               </PrivateRoute>
             }

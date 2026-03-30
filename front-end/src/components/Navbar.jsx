@@ -92,9 +92,10 @@ const NAV_PUBLIC = [
   { to: '/faq', label: 'FAQ', icon: '❓' },
 ];
 const NAV_AUTH = [
-  { to: '/dashboard', label: 'Dashboard', icon: '🎛️' },
-  { to: '/email-bot', label: 'Email Bot', icon: '✉️' },
-  { to: '/whatsapp-bot', label: 'WhatsApp', icon: '📱' },
+  { to: '/dashboard', label: 'Dashboard', icon: '🎛️', roles: [1, 2, 3] },
+  { to: '/email-bot', label: 'Email Bot', icon: '✉️', roles: [1, 2, 3] },
+  { to: '/whatsapp-bot', label: 'WhatsApp', icon: '📱', roles: [1, 2, 3] },
+  { to: '/email-forwarding', label: 'Forwarding', icon: '📨', roles: [2, 3] },
 ];
 
 /* ── role label helper ───────────────────────────────────────────────────── */
@@ -161,7 +162,12 @@ const Navbar = () => {
     navigate('/');
   };
 
-  const links = [...NAV_PUBLIC, ...(isAuthenticated ? NAV_AUTH : [])];
+  const links = [
+    ...NAV_PUBLIC,
+    ...(isAuthenticated
+      ? NAV_AUTH.filter((item) => !item.roles || item.roles.includes(user?.role_id))
+      : []),
+  ];
 
   return (
     <>
@@ -261,6 +267,14 @@ const Navbar = () => {
                         >
                           <span>📱</span> WhatsApp Bot
                         </Link>
+                        {(user?.role_id === 2 || user?.role_id === 3) && (
+                          <Link
+                            to="/email-forwarding"
+                            className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.07] transition-all"
+                          >
+                            <span>📨</span> Forwarding Bot
+                          </Link>
+                        )}
                       </div>
 
                       {/* logout */}

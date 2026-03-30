@@ -153,13 +153,7 @@ const BuyerDashboard = () => {
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900">Quick Actions</h2>
           </div>
-          <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Link
-              to="/email-forwarding"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg transition duration-200 text-center"
-            >
-              Email Forwarding
-            </Link>
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <Link
               to="/marketplace"
               className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg transition duration-200 text-center"
