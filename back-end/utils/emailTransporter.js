@@ -10,7 +10,14 @@ import nodemailer from 'nodemailer';
 export function createTransporter(email, appPassword) {
   if (!email || !appPassword) return null;
 
-  const domain = email.split('@')[1]?.toLowerCase();
+  const normalizedEmail = String(email).trim();
+  const domain = normalizedEmail.split('@')[1]?.toLowerCase();
+  const normalizedPassword = domain?.includes('gmail')
+    ? String(appPassword).replace(/\s+/g, '')
+    : String(appPassword).trim();
+
+  if (!normalizedEmail || !normalizedPassword) return null;
+
   let host = 'smtp.gmail.com';
   let port = 465;
   let secure = true;
@@ -30,8 +37,8 @@ export function createTransporter(email, appPassword) {
     port,
     secure,
     auth: {
-      user: email,
-      pass: appPassword,
+      user: normalizedEmail,
+      pass: normalizedPassword,
     },
   });
 }

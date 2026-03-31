@@ -1,31 +1,9 @@
 import { useState, useEffect, memo } from 'react';
 import { botAPI, whatsappAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
-import FluidOrb from '../components/FluidOrb';
+import StarfieldCanvas from '../components/StarfieldCanvas';
 
-/* ── Starfield ─────────────────────────────────────────────────── */
-const Starfield = memo(() => {
-  const [stars] = useState(() =>
-    Array.from({ length: 120 }, (_, i) => ({
-      id: i,
-      left: `${Math.random() * 100}%`,
-      top: `${Math.random() * 100}%`,
-      size: `${Math.random() * 1.8 + 0.4}px`,
-      animDelay: `${Math.random() * 5}s`,
-      animDur: `${Math.random() * 4 + 2}s`,
-      opacity: Math.random() * 0.4 + 0.3,
-    }))
-  );
-  return (
-    <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-50">
-      {stars.map(s => (
-        <div key={s.id} className="absolute bg-white rounded-full animate-twinkle"
-          style={{ left: s.left, top: s.top, width: s.size, height: s.size,
-            opacity: s.opacity, animationDelay: s.animDelay, animationDuration: s.animDur }} />
-      ))}
-    </div>
-  );
-});
+
 
 const WA_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
@@ -245,11 +223,9 @@ const WhatsAppBot = () => {
   return (
     <div className="min-h-screen bg-[#050505] text-white relative overflow-hidden pb-32" style={{ fontFamily: "'Inter', sans-serif" }}>
       <style>{WA_STYLES}</style>
-      <Starfield />
-
-      <div className="absolute top-[-5%] right-[-8%] w-[480px] h-[480px] opacity-[0.07] pointer-events-none">
-        <FluidOrb />
-      </div>
+      <StarfieldCanvas count={45} opacity={0.5} />
+      <div className="absolute top-[-5%] right-[-8%] w-[480px] h-[480px] opacity-[0.07] pointer-events-none rounded-full"
+        style={{ background: 'radial-gradient(circle at 60% 40%, rgba(37,211,102,0.15) 0%, rgba(120,80,200,0.08) 40%, transparent 70%)', filter: 'blur(50px)' }} />
 
       <div className="max-w-5xl mx-auto px-6 lg:px-12 pt-16 relative z-10">
         <div className="mb-12 fade-up">

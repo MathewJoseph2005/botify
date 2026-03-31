@@ -2,38 +2,10 @@ import { useState, memo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authAPI } from '../utils/api';
 import { useLanguage } from '../context/LanguageContext';
-import FluidOrb from '../components/FluidOrb';
+import CSSOrb from '../components/CSSOrb';
 import Logo from '../components/Logo';
+import StarfieldCanvas from '../components/StarfieldCanvas';
 
-/* ─── Starfield ─── */
-const Starfield = memo(() => {
-  const [stars] = useState(() =>
-    Array.from({ length: 110 }, (_, i) => ({
-      id: i, left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%`,
-      size: `${Math.random() * 2 + 0.5}px`, animDelay: `${Math.random() * 5}s`,
-      animDur: `${Math.random() * 4 + 2}s`, opacity: Math.random() * 0.5 + 0.4,
-    }))
-  );
-  const [shootingStars] = useState(() =>
-    Array.from({ length: 4 }, (_, i) => ({
-      id: `s${i}`, left: `${Math.random() * 80 + 10}%`, top: `${Math.random() * 40 - 20}%`,
-      animDelay: `${Math.random() * 12}s`, animDur: `${Math.random() * 5 + 4}s`,
-    }))
-  );
-  return (
-    <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-80">
-      {stars.map(s => (
-        <div key={s.id} className="absolute bg-white rounded-full animate-twinkle"
-          style={{ left: s.left, top: s.top, width: s.size, height: s.size,
-            opacity: s.opacity, animationDelay: s.animDelay, animationDuration: s.animDur }} />
-      ))}
-      {shootingStars.map(s => (
-        <div key={s.id} className="absolute animate-shooting"
-          style={{ left: s.left, top: s.top, animationDelay: s.animDelay, animationDuration: s.animDur }} />
-      ))}
-    </div>
-  );
-});
 
 /* ─── Particle Burst ─── */
 const ParticleBurst = ({ active, success }) => {
@@ -175,7 +147,7 @@ const Signup = () => {
 
       {/* dot grid */}
       <div className="absolute inset-0 z-0 bg-[radial-gradient(#222_1px,transparent_1px)] bg-[size:30px_30px] opacity-30 pointer-events-none" />
-      <Starfield />
+      <StarfieldCanvas count={50} opacity={0.8} />
 
       {/* ── SPLIT SCREEN ── */}
       <div className="relative z-10 flex min-h-screen">
@@ -312,7 +284,7 @@ const Signup = () => {
 
           {/* FluidOrb */}
           <div className="relative w-[520px] h-[520px] orb-float">
-            <FluidOrb />
+            <CSSOrb size={420} />
           </div>
 
           {/* Branding */}

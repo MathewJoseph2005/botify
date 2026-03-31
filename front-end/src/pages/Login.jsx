@@ -5,46 +5,9 @@ import { authAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import RoleSelectModal from '../components/RoleSelectModal';
-import FluidOrb from '../components/FluidOrb';
+import CSSOrb from '../components/CSSOrb';
 import Logo from '../components/Logo';
-
-/* ─────────────── Starfield (matches landing page exactly) ─────────────── */
-const Starfield = memo(() => {
-  const [stars] = useState(() =>
-    Array.from({ length: 120 }, (_, i) => ({
-      id: i,
-      left: `${Math.random() * 100}%`,
-      top: `${Math.random() * 100}%`,
-      size: `${Math.random() * 2 + 0.5}px`,
-      animDelay: `${Math.random() * 5}s`,
-      animDur: `${Math.random() * 4 + 2}s`,
-      opacity: Math.random() * 0.5 + 0.4,
-    }))
-  );
-  const [shootingStars] = useState(() =>
-    Array.from({ length: 5 }, (_, i) => ({
-      id: `s${i}`,
-      left: `${Math.random() * 80 + 10}%`,
-      top: `${Math.random() * 40 - 20}%`,
-      animDelay: `${Math.random() * 12}s`,
-      animDur: `${Math.random() * 5 + 4}s`,
-    }))
-  );
-
-  return (
-    <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-80">
-      {stars.map(s => (
-        <div key={s.id} className="absolute bg-white rounded-full animate-twinkle"
-          style={{ left: s.left, top: s.top, width: s.size, height: s.size,
-            opacity: s.opacity, animationDelay: s.animDelay, animationDuration: s.animDur }} />
-      ))}
-      {shootingStars.map(s => (
-        <div key={s.id} className="absolute animate-shooting"
-          style={{ left: s.left, top: s.top, animationDelay: s.animDelay, animationDuration: s.animDur }} />
-      ))}
-    </div>
-  );
-});
+import StarfieldCanvas from '../components/StarfieldCanvas';
 
 /* ─────────────── Particle burst on submit ─────────────── */
 const ParticleBurst = ({ active, success }) => {
@@ -79,7 +42,7 @@ const ParticleBurst = ({ active, success }) => {
 };
 
 /* ─────────────── Cinematic success portal overlay ─────────────── */
-const SuccessPortal = ({ userName }) => {
+const SuccessPortal = ({ userName, tl }) => {
   const orbParticles = Array.from({ length: 16 }, (_, i) => ({
     a: (i / 16) * 360,
     r: `${100 + Math.random() * 60}px`,
@@ -444,7 +407,7 @@ const Login = () => {
 
       {/* Global bg: dot grid */}
       <div className="absolute inset-0 z-0 bg-[radial-gradient(#222_1px,transparent_1px)] bg-[size:30px_30px] opacity-30 pointer-events-none" />
-      <Starfield />
+      <StarfieldCanvas count={55} opacity={0.8} />
 
       {/* ── SPLIT SCREEN WRAPPER ── */}
       <div className="relative z-10 flex min-h-screen">
@@ -458,7 +421,7 @@ const Login = () => {
 
           {/* FluidOrb */}
           <div className="relative w-[520px] h-[520px] orb-float">
-            <FluidOrb />
+            <CSSOrb size={420} />
           </div>
 
           {/* Branding below orb */}
@@ -620,7 +583,7 @@ const Login = () => {
       </div>
 
       <RoleSelectModal isOpen={showRoleModal} onSelectRole={handleRoleSelect} isLoading={isProcessingGoogleRole} />
-      {showPortal && <SuccessPortal userName={portalUser?.name} />}
+      {showPortal && <SuccessPortal userName={portalUser?.name} tl={tl} />}
     </div>
   );
 };

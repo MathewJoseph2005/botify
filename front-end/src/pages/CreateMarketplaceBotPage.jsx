@@ -2,29 +2,10 @@ import { useState, useEffect, memo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { marketplaceAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
-import FluidOrb from '../components/FluidOrb';
 import ConfirmModal from '../components/ConfirmModal';
 import EditBotModal from '../components/EditBotModal';
+import StarfieldCanvas from '../components/StarfieldCanvas';
 
-/* ── Starfield (Reused) ── */
-const Starfield = memo(() => {
-  const [stars] = useState(() =>
-    Array.from({ length: 110 }, (_, i) => ({
-      id: i, left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%`,
-      size: `${Math.random() * 1.8 + 0.4}px`, animDelay: `${Math.random() * 5}s`,
-      animDur: `${Math.random() * 4 + 2}s`, opacity: Math.random() * 0.4 + 0.3,
-    }))
-  );
-  return (
-    <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-50">
-      {stars.map(s => (
-        <div key={s.id} className="absolute bg-white rounded-full animate-twinkle"
-          style={{ left: s.left, top: s.top, width: s.size, height: s.size,
-            opacity: s.opacity, animationDelay: s.animDelay, animationDuration: s.animDur }} />
-      ))}
-    </div>
-  );
-});
 
 const CREATE_STYLES = `
   @keyframes twinkle { 0%,100%{opacity:0.1;transform:scale(0.8)} 50%{opacity:1;transform:scale(1.1);box-shadow:0 0 8px 1px rgba(255,255,255,0.3)} }
@@ -204,12 +185,11 @@ const CreateMarketplaceBotPage = () => {
   return (
     <div className="min-h-screen bg-[#050505] text-white relative overflow-hidden pb-32" style={{ fontFamily: "'Inter', sans-serif" }}>
       <style>{CREATE_STYLES}</style>
-      <Starfield />
+      <StarfieldCanvas count={45} opacity={0.5} />
 
       <div className="max-w-7xl mx-auto px-6 lg:px-12 pt-16 relative z-10">
-        <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] opacity-10 pointer-events-none">
-          <FluidOrb />
-        </div>
+        <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] opacity-10 pointer-events-none rounded-full"
+          style={{ background: 'radial-gradient(circle at 60% 40%, rgba(255,215,0,0.18) 0%, rgba(120,80,200,0.10) 40%, transparent 70%)', filter: 'blur(50px)' }} />
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 fade-up">
           <div>

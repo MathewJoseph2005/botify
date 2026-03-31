@@ -293,6 +293,12 @@ router.post('/test-connection/:botId', verifyToken, async (req, res) => {
     }
 
     const transporter = createTransporter(process.env.BOT_EMAIL, process.env.BOT_PASSWORD);
+    if (!transporter) {
+      return res.status(500).json({
+        success: false,
+        message: 'System bot credentials are missing or invalid in backend environment.',
+      });
+    }
     await transporter.verify();
 
     // Send test email to the user's email
@@ -315,9 +321,21 @@ router.post('/test-connection/:botId', verifyToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Connection test error:', error);
+    const errCode = String(error?.code || '');
+    const errResponse = String(error?.response || '').toLowerCase();
+    const isGmailBadCredentials = errCode === 'EAUTH' && (
+      errResponse.includes('5.7.8') ||
+      errResponse.includes('badcredentials') ||
+      errResponse.includes('username and password not accepted')
+    );
+
+    const message = isGmailBadCredentials
+      ? 'Gmail rejected authentication. Use a valid Gmail App Password (16 chars, no spaces) for BOT_PASSWORD, then restart backend.'
+      : 'Connection failed. Check system bot credentials in backend.';
+
     res.status(400).json({
       success: false,
-      message: 'Connection failed. Check system bot credentials in backend.',
+      message,
       error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
@@ -341,6 +359,7 @@ router.post('/email-campaign/:botId', verifyToken, uploadFields, async (req, res
 
   let emails = [];
   let recipientNames = {};
+  let excelPath = null;
 
   // Check if manual recipients or file upload
   if (manualRecipients) {
@@ -372,7 +391,7 @@ router.post('/email-campaign/:botId', verifyToken, uploadFields, async (req, res
       });
     }
   } else if (req.files?.excelFile?.[0]) {
-    const excelPath = req.files.excelFile[0].path;
+    excelPath = req.files.excelFile[0].path;
     
     // Parse emails from file
     try {
@@ -486,7 +505,7 @@ router.post('/email-campaign/:botId', verifyToken, uploadFields, async (req, res
       }
 
       // Clean up files after campaign completes
-      cleanupFile(excelPath);
+      if (excelPath) cleanupFile(excelPath);
       attachmentFiles.forEach(file => cleanupFile(file.path));
 
       // Update campaign record with results
@@ -508,7 +527,7 @@ router.post('/email-campaign/:botId', verifyToken, uploadFields, async (req, res
       const scheduledDate = new Date(scheduledTime);
 
       if (isNaN(scheduledDate.getTime()) || scheduledDate <= new Date()) {
-        cleanupFile(excelPath);
+        if (excelPath) cleanupFile(excelPath);
         attachmentFiles.forEach(file => cleanupFile(file.path));
         return res.status(400).json({
           success: false,

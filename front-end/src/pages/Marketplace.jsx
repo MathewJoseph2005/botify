@@ -1,29 +1,11 @@
 import { useState, useEffect, memo } from 'react';
 import { marketplaceAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
-import FluidOrb from '../components/FluidOrb';
+
 import Modal from '../components/Modal';
 import DemoCheckoutModal from '../components/DemoCheckoutModal';
+import StarfieldCanvas from '../components/StarfieldCanvas';
 
-/* ── Starfield (reused) ── */
-const Starfield = memo(() => {
-  const [stars] = useState(() =>
-    Array.from({ length: 120 }, (_, i) => ({
-      id: i, left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%`,
-      size: `${Math.random() * 1.8 + 0.4}px`, animDelay: `${Math.random() * 5}s`,
-      animDur: `${Math.random() * 4 + 2}s`, opacity: Math.random() * 0.4 + 0.3,
-    }))
-  );
-  return (
-    <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-50">
-      {stars.map(s => (
-        <div key={s.id} className="absolute bg-white rounded-full animate-twinkle"
-          style={{ left: s.left, top: s.top, width: s.size, height: s.size,
-            opacity: s.opacity, animationDelay: s.animDelay, animationDuration: s.animDur }} />
-      ))}
-    </div>
-  );
-});
 
 const MARKETPLACE_STYLES = `
   @keyframes twinkle { 0%,100%{opacity:0.1;transform:scale(0.8)} 50%{opacity:1;transform:scale(1.1);box-shadow:0 0 8px 1px rgba(255,255,255,0.3)} }
@@ -184,11 +166,12 @@ const Marketplace = () => {
   return (
     <div className="min-h-screen bg-[#050505] text-white relative overflow-hidden pb-32" style={{ fontFamily: "'Inter', sans-serif" }}>
       <style>{MARKETPLACE_STYLES}</style>
-      <Starfield />
+      <StarfieldCanvas count={45} opacity={0.5} />
 
       <div className="relative pt-20 pb-16 px-6 sm:px-12 max-w-7xl mx-auto z-10">
         <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[800px] h-[600px] opacity-20 pointer-events-none">
-          <FluidOrb />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] opacity-20 pointer-events-none rounded-full"
+            style={{ background: 'radial-gradient(ellipse at 50% 30%, rgba(255,215,0,0.12) 0%, rgba(92,32,98,0.08) 40%, transparent 70%)', filter: 'blur(60px)' }} />
         </div>
 
         <div className="text-center mb-16 fade-up">

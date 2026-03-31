@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState, useMemo, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, ArrowRight, Zap, Shield, Sparkles, Globe, BarChart3, Users } from 'lucide-react';
-import FluidOrb from '../components/FluidOrb';
+import CSSOrb from '../components/CSSOrb';
 import GlassCard from '../components/GlassCard';
 import Logo from '../components/Logo';
+import StarfieldCanvas from '../components/StarfieldCanvas';
 
 const featuresList = [
   { role: 'Global', label: 'Market Reach', heading: 'Omnichannel Deployment', footer: 'WhatsApp, Telegram, Discord.', icon: <Globe className="w-5 h-5" /> },
@@ -20,49 +21,6 @@ const featuresList = [
 
 const doubled = [...featuresList, ...featuresList];
 
-const Starfield = memo(() => {
-  const [stars, setStars] = useState([]);
-  const [shootingStars, setShootingStars] = useState([]);
-
-  useEffect(() => {
-    setStars(
-      Array.from({ length: 150 }, (_, i) => ({
-        id: i,
-        left: `${Math.random() * 100}%`,
-        top: `${Math.random() * 100}%`,
-        size: `${Math.random() * 2 + 0.5}px`,
-        animationDelay: `${Math.random() * 5}s`,
-        animationDuration: `${Math.random() * 4 + 2}s`,
-        opacity: Math.random() * 0.5 + 0.3,
-      }))
-    );
-    setShootingStars(
-      Array.from({ length: 8 }, (_, i) => ({
-        id: `s${i}`,
-        left: `${Math.random() * 80 + 10}%`,
-        top: `${Math.random() * 40 - 20}%`,
-        animationDelay: `${Math.random() * 15}s`,
-        animationDuration: `${Math.random() * 6 + 4}s`,
-      }))
-    );
-  }, []);
-
-  return (
-    <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-60">
-      {stars.map((s) => (
-        <div key={s.id} className="absolute bg-white rounded-full animate-twinkle"
-          style={{
-            left: s.left, top: s.top, width: s.size, height: s.size,
-            opacity: s.opacity, animationDelay: s.animationDelay, animationDuration: s.animationDuration
-          }} />
-      ))}
-      {shootingStars.map((s) => (
-        <div key={s.id} className="absolute animate-shooting"
-          style={{ left: s.left, top: s.top, animationDelay: s.animationDelay, animationDuration: s.animationDuration }} />
-      ))}
-    </div>
-  );
-});
 
 const MarqueeCard = memo(({ box }) => {
   const cardRef = useRef(null);
@@ -173,7 +131,7 @@ export default function LandingPage() {
       <div className="relative min-h-[100vh] flex flex-col pt-[180px] sm:pt-0">
         <div className="absolute inset-0 z-0 bg-mesh pointer-events-none" />
         <div className="absolute inset-0 z-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
-        <Starfield />
+        <StarfieldCanvas count={60} opacity={0.6} />
 
         {/* Floating background orb - Unified with Login Page Style */}
         <div className="absolute top-[15%] left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none z-0">
@@ -182,7 +140,7 @@ export default function LandingPage() {
              style={{ background: 'radial-gradient(ellipse 80% 70% at 50% 50%, rgba(255,215,0,0.06) 0%, transparent 70%)' }} />
            
            <div className="relative w-[540px] h-[540px] orb-main-float">
-             <FluidOrb />
+             <CSSOrb size={540} />
            </div>
         </div>
 
@@ -267,9 +225,8 @@ export default function LandingPage() {
 
       {/* CTA Footer */}
       <section className="py-48 flex flex-col items-center justify-center text-center px-6">
-        <div className="w-[400px] h-[400px] absolute opacity-10 pointer-events-none">
-          <FluidOrb />
-        </div>
+        <div className="w-[400px] h-[400px] absolute opacity-10 pointer-events-none rounded-full"
+          style={{ background: 'radial-gradient(circle at 50% 50%, rgba(255,215,0,0.25) 0%, rgba(120,80,200,0.15) 40%, transparent 70%)', filter: 'blur(60px)' }} />
         <h2 className="text-4xl md:text-6xl font-black tracking-tighter mb-12 relative z-10">Ready to <span className="text-[#ffd700]">Automate?</span></h2>
         <Link to="/signup" className="relative z-10 px-12 py-6 bg-[#ffd700] text-black rounded-3xl font-black uppercase text-sm tracking-[0.2em] shadow-[0_20px_50px_rgba(255,215,0,0.3)] hover:scale-[1.05] transition-transform">
           Connect to the Grid
