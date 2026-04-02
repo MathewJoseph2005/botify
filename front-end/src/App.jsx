@@ -2,7 +2,6 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import PrivateRoute from './components/PrivateRoute';
-import { LanguageProvider } from './context/LanguageContext';
 import { useAuth } from './context/AuthContext';
 
 // Lazy-load every page so only the current route's bundle is parsed on load
@@ -19,6 +18,7 @@ const WhatsAppCampaign       = lazy(() => import('./pages/WhatsAppCampaign'));
 const BotCreationPage        = lazy(() => import('./pages/BotCreationPage'));
 const CreateMarketplaceBotPage = lazy(() => import('./pages/CreateMarketplaceBotPage'));
 const FAQPage                = lazy(() => import('./pages/FAQPage'));
+const VibeCode               = lazy(() => import('./pages/VibeCode'));
 const Unauthorized           = lazy(() => import('./pages/Unauthorized'));
 const ForgotPassword         = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword          = lazy(() => import('./pages/ResetPassword'));
@@ -88,6 +88,9 @@ function App() {
             } />
             <Route path="/seller/create-bot" element={
               <PrivateRoute allowedRoles={[2]}><CreateMarketplaceBotPage /></PrivateRoute>
+            } />
+            <Route path="/vibe-code" element={
+              <PrivateRoute allowedRoles={[1, 2, 3]}><VibeCode /></PrivateRoute>
             } />
 
             {/* 404 */}

@@ -72,7 +72,7 @@ router.post('/create-checkout-session', verifyToken, requireRole(3), async (req,
 
       // Calculate amount (in dollars)
       const totalAmount = bot.price * quantity;
-      const feeInfo = calculateFees(Math.round(totalAmount * 100)) / 100;
+      const feeInfo = calculateFees(Math.round(totalAmount * 100));
 
       // Return demo checkout data (no real Stripe session)
       return res.json({

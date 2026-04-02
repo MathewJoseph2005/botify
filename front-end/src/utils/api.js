@@ -113,6 +113,12 @@ export const paymentsAPI = {
   getPayoutRequests: (params) => api.get('/payments/seller/payout-requests', { params }),
 };
 
+// Vibe Code API
+export const vibeCodeAPI = {
+  getOptions: () => api.get('/vibecode/options'),
+  generate: (data) => api.post('/vibecode/generate', data),
+};
+
 // Auth helper functions
 export const authHelpers = {
   setToken: (token) => localStorage.setItem('token', token),

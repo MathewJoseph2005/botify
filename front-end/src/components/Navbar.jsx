@@ -96,6 +96,7 @@ const NAV_AUTH = [
   { to: '/dashboard', labelKey: 'dashboard', icon: '🎛️', roles: [1, 2, 3] },
   { to: '/email-bot', labelKey: 'emailBot', icon: '✉️', roles: [1, 2, 3] },
   { to: '/whatsapp-bot', labelKey: 'whatsapp', icon: '📱', roles: [1, 2, 3] },
+  { to: '/vibe-code', labelKey: 'vibeCode', icon: '🧬', roles: [1, 2, 3] },
   { to: '/email-forwarding', labelKey: 'forwarding', icon: '📨', roles: [2, 3] },
 ];
 
@@ -264,6 +265,12 @@ const Navbar = () => {
                           className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.07] transition-all"
                         >
                           <span>📱</span> {t('nav.whatsapp')}
+                        </Link>
+                        <Link
+                          to="/vibe-code"
+                          className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] text-white/70 hover:text-white hover:bg-white/[0.07] transition-all"
+                        >
+                          <span>🧬</span> {t('nav.vibeCode')}
                         </Link>
                         {(user?.role_id === 2 || user?.role_id === 3) && (
                           <Link

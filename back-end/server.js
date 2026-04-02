@@ -6,6 +6,7 @@ import authRoutes from './routes/auth.js';
 import botRoutes from './routes/bot.js';
 import marketplaceRoutes from './routes/marketplace.js';
 import paymentRoutes from './routes/payment.js';
+import vibecodeRoutes from './routes/vibecode.js';
 import telegramBotFactory from './services/telegramBotFactory.js';
 import emailForwardingService from './services/EmailForwardingService.js';
 import checkDatabaseSchema from './config/schema-check.js';
@@ -67,6 +68,7 @@ app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/bot', botRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/vibecode', vibecodeRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {

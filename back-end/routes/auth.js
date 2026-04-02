@@ -732,8 +732,6 @@ router.get('/admin/purchases', verifyToken, isAdmin, async (req, res) => {
   }
 });
 
-export default router;
-
 // Google OAuth token verification endpoint
 // Expects { id_token } from client (Google Identity Services)
 // Optional query param: ?role_id=2 (seller) or 3 (buyer) - only used for NEW users
@@ -851,3 +849,5 @@ router.post('/google', async (req, res) => {
     res.status(500).json({ success: false, message: 'Google authentication failed.' });
   }
 });
+
+export default router;
