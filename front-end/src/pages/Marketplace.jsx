@@ -1,6 +1,7 @@
 import { useState, useEffect, memo } from 'react';
 import { marketplaceAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 
 import Modal from '../components/Modal';
 import DemoCheckoutModal from '../components/DemoCheckoutModal';
@@ -53,23 +54,24 @@ const MARKETPLACE_STYLES = `
 `;
 
 const PLATFORMS = [
-  { value: '', label: 'All', icon: '🌐' },
-  { value: 'email', label: 'Email', icon: '📧' },
-  { value: 'whatsapp', label: 'WhatsApp', icon: '💬' },
-  { value: 'telegram', label: 'Telegram', icon: '✈️' },
-  { value: 'discord', label: 'Discord', icon: '🎮' },
-  { value: 'slack', label: 'Slack', icon: '💼' },
+  { value: '', labelKey: 'marketplace.filters.allPlatforms', icon: '🌐' },
+  { value: 'email', labelKey: 'marketplace.filters.email', icon: '📧' },
+  { value: 'whatsapp', labelKey: 'marketplace.filters.whatsapp', icon: '💬' },
+  { value: 'telegram', labelKey: 'marketplace.filters.telegram', icon: '✈️' },
+  { value: 'discord', labelKey: 'marketplace.filters.discord', icon: '🎮' },
+  { value: 'slack', labelKey: 'marketplace.filters.slack', icon: '💼' },
 ];
 
 const SORT_OPTIONS = [
-  { value: 'newest', label: 'Newest Arrivals' },
-  { value: 'popular', label: 'Most Popular' },
-  { value: 'price_asc', label: 'Price: Low to High' },
-  { value: 'price_desc', label: 'Price: High to Low' },
+  { value: 'newest', labelKey: 'marketplace.sort.newest' },
+  { value: 'popular', labelKey: 'marketplace.sort.popular' },
+  { value: 'price_asc', labelKey: 'marketplace.sort.priceAsc' },
+  { value: 'price_desc', labelKey: 'marketplace.sort.priceDesc' },
 ];
 
 const Marketplace = () => {
   const { user, isAuthenticated } = useAuth();
+  const { t } = useLanguage();
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -116,7 +118,7 @@ const Marketplace = () => {
         setListings(res.data.listings);
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load marketplace.');
+      setError(err.response?.data?.message || t('marketplace.errors.load'));
     } finally {
       setLoading(false);
     }
@@ -129,11 +131,11 @@ const Marketplace = () => {
 
   const handlePurchase = (bot) => {
     if (!isAuthenticated) {
-      setError('Authorisation required. Please sign in as a Buyer.');
+      setError(t('marketplace.errors.loginToPurchase'));
       return;
     }
     if (user?.role_id !== 3) {
-      setError('Action restricted. Only Buyer accounts can acquire bots.');
+      setError(t('marketplace.errors.buyerOnly'));
       return;
     }
     setCheckoutModal({ open: true, bot });
@@ -142,7 +144,7 @@ const Marketplace = () => {
 
   const handleCheckoutSuccess = () => {
     setCheckoutModal({ open: false, bot: null });
-    setSuccess('🎉 Purchase completed successfully!');
+    setSuccess(t('marketplace.success.purchaseComplete'));
     fetchUserPurchases(); 
     fetchListings();
     setTimeout(() => setSuccess(''), 5000);
@@ -156,7 +158,7 @@ const Marketplace = () => {
         setResourceModal({ open: true, bot, loading: false, resource: res.data.bot });
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load bot resources.');
+      setError(err.response?.data?.message || t('marketplace.errors.resources'));
       setResourceModal(prev => ({ ...prev, loading: false }));
     }
   };
@@ -175,12 +177,12 @@ const Marketplace = () => {
         </div>
 
         <div className="text-center mb-16 fade-up">
-          <p className="text-[#ffd700] text-[11px] font-bold uppercase tracking-[0.4em] mb-4">Autonomous Economy</p>
+          <p className="text-[#ffd700] text-[11px] font-bold uppercase tracking-[0.4em] mb-4">{t('marketplace.kicker')}</p>
           <h1 className="text-5xl md:text-6xl font-bold tracking-tighter mb-6">
-            Elite <span className="text-[#ffd700] gold-glow">Bot</span> Marketplace
+            {t('marketplace.title')}
           </h1>
           <p className="text-white/40 text-[15px] max-w-2xl mx-auto leading-relaxed">
-            Discover and acquire high-performance automated agents built for scale across global messaging protocols.
+            {t('marketplace.subtitle')}
           </p>
         </div>
 
@@ -190,14 +192,14 @@ const Marketplace = () => {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by intelligence domain or protocol..."
+              placeholder={t('marketplace.searchPlaceholder')}
               className="w-full px-6 py-4 rounded-2xl input-glass outline-none text-[14px] placeholder-white/20 pr-32"
             />
             <button
               type="submit"
               className="absolute right-2 top-2 bottom-2 px-6 rounded-xl bg-[#ffd700] text-[#050505] font-bold text-xs hover:scale-[1.03] transition-all"
             >
-              SEARCH
+              {t('marketplace.search')}
             </button>
           </form>
 
@@ -217,7 +219,7 @@ const Marketplace = () => {
                 onClick={() => setPlatform(p.value)}
                 className={`pill-filter px-4 py-2 rounded-full text-[12px] font-bold uppercase tracking-wider flex items-center gap-2 ${platform === p.value ? 'active' : ''}`}
               >
-                <span>{p.icon}</span> {p.label}
+                <span>{p.icon}</span> {t(p.labelKey)}
               </button>
             ))}
           </div>
@@ -228,7 +230,7 @@ const Marketplace = () => {
             className="input-glass px-4 py-2 rounded-xl text-[12px] font-bold text-white/60 bg-transparent outline-none cursor-pointer"
           >
             {SORT_OPTIONS.map((s) => (
-              <option key={s.value} value={s.value} className="bg-[#111]">{s.label}</option>
+              <option key={s.value} value={s.value} className="bg-[#111]">{t(s.labelKey)}</option>
             ))}
           </select>
         </div>
@@ -236,13 +238,13 @@ const Marketplace = () => {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-32 opacity-40">
             <div className="w-12 h-12 border-2 border-[#ffd700]/30 border-t-[#ffd700] rounded-full animate-spin mb-4" />
-            <p className="text-[10px] font-bold uppercase tracking-[0.3em]">Synching Neural Grid</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em]">{t('marketplace.loading')}</p>
           </div>
         ) : listings.length === 0 ? (
           <div className="glass-card p-20 text-center fade-up">
             <div className="text-4xl mb-6 opacity-30">🔍</div>
-            <h3 className="text-xl font-bold mb-2">Network Search Negative</h3>
-            <p className="text-white/30 text-sm italic">Lower filter sensitivity or try a different frequency.</p>
+            <h3 className="text-xl font-bold mb-2">{t('marketplace.empty.title')}</h3>
+            <p className="text-white/30 text-sm italic">{search || platform ? t('marketplace.empty.filtered') : t('marketplace.empty.default')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 fade-up fade-up-3">
@@ -266,10 +268,10 @@ const Marketplace = () => {
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="text-lg font-bold group-hover:text-[#ffd700] transition-colors">{bot.name}</h3>
                     <span className="text-[14px] font-black tracking-tight text-[#ffd700] gold-glow">
-                      {parseFloat(bot.price) === 0 ? 'FREE' : `$${parseFloat(bot.price).toFixed(2)}`}
+                      {parseFloat(bot.price) === 0 ? t('marketplace.free') : `$${parseFloat(bot.price).toFixed(2)}`}
                     </span>
                   </div>
-                  <p className="text-[11px] text-white/30 font-medium uppercase tracking-widest mb-4">by {bot.seller_name}</p>
+                  <p className="text-[11px] text-white/30 font-medium uppercase tracking-widest mb-4">{t('marketplace.bySeller', { seller: bot.seller_name })}</p>
                   
                   {bot.description && (
                     <p className="text-[13px] text-white/50 mb-6 line-clamp-2 leading-relaxed italic">
@@ -295,21 +297,21 @@ const Marketplace = () => {
                       onClick={() => setSelectedBot(bot)}
                       className="flex-1 px-4 py-2.5 rounded-xl border border-white/10 text-[11px] font-bold uppercase tracking-widest hover:bg-white/5 transition-all active:scale-[0.98]"
                     >
-                      Dossier
+                      {t('marketplace.details')}
                     </button>
                     {purchasedBotIds.includes(bot.id) ? (
                       <button
                         onClick={() => handleViewResources(bot)}
                         className="flex-1 px-4 py-2.5 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-[11px] font-black uppercase tracking-widest hover:bg-green-500/20 transition-all"
                       >
-                        ✓ Resources
+                        {t('marketplace.viewResources')}
                       </button>
                     ) : (
                       <button
                         onClick={() => handlePurchase(bot)}
                         className="flex-1 px-4 py-2.5 rounded-xl bg-[#ffd700] text-[#050505] text-[11px] font-black uppercase tracking-widest hover:bg-[#fff6a0] transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
                       >
-                        Acquire
+                        {t('marketplace.buyNow')}
                       </button>
                     )}
                   </div>
@@ -354,17 +356,17 @@ const Marketplace = () => {
 
             <div className="px-2">
               <h2 className="text-3xl font-bold tracking-tight mb-2 text-white/95">{selectedBot.name}</h2>
-              <p className="text-[11px] font-bold uppercase tracking-[0.34em] text-white/20 mb-6">Designed by {selectedBot.seller_name}</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.34em] text-white/20 mb-6">{t('marketplace.bySeller', { seller: selectedBot.seller_name })}</p>
               
               <div className="space-y-6 mb-8">
                 <div>
-                  <h4 className="text-[10px] font-bold text-[#ffd700] uppercase tracking-widest mb-2 opacity-60">Architectural Summary</h4>
-                  <p className="text-sm text-white/50 leading-relaxed italic">"{selectedBot.description || 'No detailed dossier available for this unit.'}"</p>
+                  <h4 className="text-[10px] font-bold text-[#ffd700] uppercase tracking-widest mb-2 opacity-60">{t('marketplace.summary')}</h4>
+                  <p className="text-sm text-white/50 leading-relaxed italic">"{selectedBot.description || t('marketplace.noDescription')}"</p>
                 </div>
 
                 {selectedBot.features && selectedBot.features.length > 0 && (
                   <div>
-                    <h4 className="text-[10px] font-bold text-[#ffd700] uppercase tracking-widest mb-3 opacity-60">System Capabilities</h4>
+                    <h4 className="text-[10px] font-bold text-[#ffd700] uppercase tracking-widest mb-3 opacity-60">{t('marketplace.capabilities')}</h4>
                     <div className="grid grid-cols-2 gap-3">
                       {selectedBot.features.map((f, i) => (
                         <div key={i} className="flex items-center gap-3 text-xs text-white/40 group">
@@ -378,21 +380,21 @@ const Marketplace = () => {
 
               <div className="flex items-center justify-between p-1.5 pl-6 rounded-2xl bg-[#ffd700]/5 border border-[#ffd700]/10">
                 <span className="text-2xl font-black text-[#ffd700] gold-glow">
-                  {parseFloat(selectedBot.price) === 0 ? 'FREE' : `$${parseFloat(selectedBot.price).toFixed(2)}`}
+                  {parseFloat(selectedBot.price) === 0 ? t('marketplace.free') : `$${parseFloat(selectedBot.price).toFixed(2)}`}
                 </span>
                 {purchasedBotIds.includes(selectedBot.id) ? (
                   <button
                     onClick={() => handleViewResources(selectedBot)}
                     className="px-8 py-3.5 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-[12px] font-black uppercase tracking-widest hover:bg-green-500/20 transition-all"
                   >
-                    View Resources
+                    {t('marketplace.viewResources')}
                   </button>
                 ) : (
                   <button
                     onClick={() => handlePurchase(selectedBot)}
                     className="px-8 py-3.5 rounded-xl bg-[#ffd700] text-[#050505] text-[12px] font-black uppercase tracking-widest hover:bg-[#fff6a0] transition-all hover:scale-[1.02] active:scale-[0.98]"
                   >
-                    Initiate Acquisition
+                    {t('marketplace.purchaseBot')}
                   </button>
                 )}
               </div>
@@ -416,7 +418,7 @@ const Marketplace = () => {
         <Modal onClose={() => setResourceModal({ open: false, bot: null, loading: false, resource: null })} maxWidth="max-w-2xl">
           <div className="p-2">
              <div className="flex items-center justify-between mb-8">
-               <h2 className="text-2xl font-bold tracking-tight">Intelligence <span className="text-[#ffd700]">Manifesto</span></h2>
+               <h2 className="text-2xl font-bold tracking-tight">{t('marketplace.resources.title')}</h2>
                <button onClick={() => setResourceModal({ open: false, bot: null, loading: false, resource: null })}
                  className="text-2xl text-white/30 hover:text-white">&times;</button>
              </div>
@@ -424,16 +426,16 @@ const Marketplace = () => {
              {resourceModal.loading ? (
                <div className="py-20 text-center opacity-30">
                   <div className="w-8 h-8 border-2 border-[#ffd700]/30 border-t-[#ffd700] rounded-full animate-spin mx-auto mb-4" />
-                  <p className="text-[10px] font-bold uppercase tracking-widest">Decentralising Assets...</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest">{t('marketplace.resources.loading')}</p>
                </div>
              ) : resourceModal.resource ? (
                <div className="space-y-8">
                   {resourceModal.resource.bot_script && (
                     <div className="space-y-3">
                       <div className="flex justify-between items-end">
-                        <h4 className="text-[10px] font-bold text-[#ffd700] uppercase tracking-widest opacity-60">Neural Script</h4>
-                        <button onClick={() => { navigator.clipboard.writeText(resourceModal.resource.bot_script); setSuccess('Copied to clipboard'); setTimeout(() => setSuccess(''), 2000); }}
-                          className="text-[9px] font-bold text-white/20 hover:text-white uppercase tracking-widest transition-colors">Copy to Clipboard</button>
+                        <h4 className="text-[10px] font-bold text-[#ffd700] uppercase tracking-widest opacity-60">{t('marketplace.resources.script')}</h4>
+                        <button onClick={() => { navigator.clipboard.writeText(resourceModal.resource.bot_script); setSuccess(t('marketplace.resources.copied')); setTimeout(() => setSuccess(''), 2000); }}
+                          className="text-[9px] font-bold text-white/20 hover:text-white uppercase tracking-widest transition-colors">{t('marketplace.resources.copyScript')}</button>
                       </div>
                       <div className="bg-black/40 border border-white/5 rounded-xl p-5 font-mono text-[11px] text-white/60 overflow-auto max-h-64 custom-scrollbar">
                         <pre>{resourceModal.resource.bot_script}</pre>
@@ -444,17 +446,17 @@ const Marketplace = () => {
                   {resourceModal.resource.github_link && (
                     <div className="p-6 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between group">
                        <div>
-                         <h4 className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-1">Source Registry</h4>
+                         <h4 className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-1">{t('marketplace.resources.github')}</h4>
                          <p className="text-xs font-bold text-[#ffd700]">{resourceModal.resource.github_link}</p>
                        </div>
                        <a href={resourceModal.resource.github_link} target="_blank" rel="noopener noreferrer"
-                        className="px-6 py-2 rounded-xl bg-white/10 text-[10px] font-bold uppercase tracking-widest group-hover:bg-[#ffd700] group-hover:text-[#050505] transition-all">Explore Grid</a>
+                        className="px-6 py-2 rounded-xl bg-white/10 text-[10px] font-bold uppercase tracking-widest group-hover:bg-[#ffd700] group-hover:text-[#050505] transition-all">{t('marketplace.resources.openGithub')}</a>
                     </div>
                   )}
 
                   {resourceModal.resource.config_json && (
                     <div className="space-y-3">
-                      <h4 className="text-[10px] font-bold text-[#ffd700] uppercase tracking-widest opacity-60">Architectural Parameters</h4>
+                      <h4 className="text-[10px] font-bold text-[#ffd700] uppercase tracking-widest opacity-60">{t('marketplace.resources.config')}</h4>
                       <div className="bg-black/40 border border-white/5 rounded-xl p-5 font-mono text-[11px] text-white/40 overflow-auto max-h-48 custom-scrollbar">
                         <pre>{JSON.stringify(resourceModal.resource.config_json, null, 2)}</pre>
                       </div>
@@ -462,7 +464,7 @@ const Marketplace = () => {
                   )}
                </div>
              ) : (
-               <p className="text-white/20 text-center py-10 italic text-sm">Failed to retrieve neural assets from the grid.</p>
+               <p className="text-white/20 text-center py-10 italic text-sm">{t('marketplace.resources.failed')}</p>
              )}
           </div>
         </Modal>

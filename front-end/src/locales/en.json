@@ -86,35 +86,79 @@
     }
   },
   "marketplace": {
+    "kicker": "Autonomous Economy",
     "title": "Elite Bot Marketplace",
-    "subtitle": "Autonomous Economy",
-    "description": "Discover and acquire high-performance automated agents built for scale across global messaging protocols.",
-    "searchPlaceholder": "Search by name or platform...",
-    "search": "Search",
-    "loading": "Loading...",
-    "noResults": "No bots found",
-    "noResultsDesc": "Try adjusting your search or filters.",
-    "sortNewest": "Newest Arrivals",
-    "sortPopular": "Most Popular",
-    "sortPriceAsc": "Price: Low to High",
-    "sortPriceDesc": "Price: High to Low",
-    "allPlatforms": "All",
+    "subtitle": "Discover and acquire high-performance automated agents built for scale across global messaging protocols.",
+    "searchPlaceholder": "Search by intelligence domain or protocol...",
+    "search": "SEARCH",
+    "loading": "Synchronising Neural Grid",
+    "empty": {
+      "title": "Network Search Negative",
+      "default": "Lower filter sensitivity or try a different frequency.",
+      "filtered": "Lower filter sensitivity or try a different frequency."
+    },
+    "filters": {
+      "allPlatforms": "All",
+      "email": "Email",
+      "whatsapp": "WhatsApp",
+      "telegram": "Telegram",
+      "discord": "Discord",
+      "slack": "Slack",
+      "instagram": "Instagram"
+    },
+    "sort": {
+      "newest": "Newest Arrivals",
+      "popular": "Most Popular",
+      "priceAsc": "Price: Low to High",
+      "priceDesc": "Price: High to Low"
+    },
+    "errors": {
+      "load": "Failed to load marketplace.",
+      "loginToPurchase": "Authorisation required. Please sign in as a Buyer.",
+      "buyerOnly": "Action restricted. Only Buyer accounts can acquire bots.",
+      "resources": "Failed to load bot resources."
+    },
+    "success": {
+      "purchaseComplete": "🎉 Purchase completed successfully!"
+    },
     "free": "FREE",
-    "by": "by",
-    "dossier": "Details",
-    "acquire": "Acquire",
-    "viewResources": "View Resources",
-    "initiateAcquisition": "Purchase Now",
-    "authRequired": "Please sign in as a Buyer to purchase bots.",
-    "buyerOnly": "Only Buyer accounts can acquire bots.",
-    "purchaseSuccess": "Purchase completed successfully!",
-    "failedLoad": "Failed to load marketplace."
+    "bySeller": "by {{seller}}",
+    "details": "Dossier",
+    "viewResources": "Resources",
+    "buyNow": "Acquire",
+    "opening": "Opening...",
+    "summary": "Architectural Summary",
+    "noDescription": "No detailed dossier available for this unit.",
+    "capabilities": "System Capabilities",
+    "purchaseBot": "Initiate Acquisition",
+    "openingCheckout": "Opening Checkout...",
+    "sales": "{{count}} sales",
+    "moreFeatures": "+{{count}} more",
+    "listedOn": "Listed {{date}}",
+    "features": "Features",
+    "close": "Close",
+    "resources": {
+      "title": "Intelligence Manifesto",
+      "loading": "Decentralising Assets...",
+      "script": "Neural Script",
+      "copyScript": "Copy to Clipboard",
+      "copied": "Copied to clipboard",
+      "github": "Source Registry",
+      "openGithub": "Explore Grid",
+      "config": "Architectural Parameters",
+      "empty": "No resources available for this bot yet.",
+      "failed": "Failed to retrieve neural assets from the grid."
+    }
   },
   "login": {
     "title": "Welcome back",
     "subtitle": "Sign in to your Botify account",
     "emailLabel": "Email Address",
     "passwordLabel": "Password",
+    "placeholders": {
+      "email": "you@example.com",
+      "password": "••••••••"
+    },
     "rememberMe": "Remember me",
     "forgotPassword": "Forgot password?",
     "signingIn": "Signing in…",
@@ -126,7 +170,19 @@
     "tagline": "The next-generation bot marketplace for WhatsApp, Telegram & Discord.",
     "authenticated": "Authenticated",
     "welcomeBack": "Welcome back",
-    "redirecting": "Taking you to your dashboard…"
+    "redirecting": "Taking you to your dashboard…",
+    "stats": {
+      "bots": "Bots",
+      "users": "Users",
+      "uptime": "Uptime"
+    },
+    "errors": {
+      "googleSignup": "Failed to complete Google sign-up.",
+      "googleSignin": "Google sign-in failed.",
+      "googleScript": "Failed to load Google Identity Services script.",
+      "navigate": "Failed to navigate to dashboard. Please refresh and try again.",
+      "loginFailed": "Login failed. Please try again."
+    }
   },
   "signup": {
     "title": "Create your account",

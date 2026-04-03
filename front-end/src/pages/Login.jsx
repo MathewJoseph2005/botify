@@ -311,7 +311,7 @@ const Login = () => {
         else if (r === 'seller') navigate('/dashboard/seller');
         else navigate('/dashboard/buyer');
       }
-    } catch (err) { setError(err.response?.data?.message || 'Failed to complete Google sign-up.'); }
+    } catch (err) { setError(err.response?.data?.message || tl('login.errors.googleSignup')); }
     finally { setIsProcessingGoogleRole(false); }
   };
 
@@ -335,7 +335,7 @@ const Login = () => {
             else navigate('/dashboard/buyer');
           } catch (navErr) {
             console.error('Navigation error:', navErr);
-            setError('Failed to navigate to dashboard. Please refresh and try again.');
+            setError(tl('login.errors.navigate'));
             setShowPortal(false);
           }
         }, 2200);
@@ -343,7 +343,7 @@ const Login = () => {
     } catch (err) {
       setSubmitState('error');
       console.error('Login error:', err);
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      setError(err.response?.data?.message || tl('login.errors.loginFailed'));
       if (formRef.current) formRef.current.classList.add('error-shake');
       setTimeout(() => {
         if (formRef.current) formRef.current.classList.remove('error-shake');
@@ -383,7 +383,7 @@ const Login = () => {
                   }, 2200);
                 }
               }
-            } catch (err) { setError(err.response?.data?.message || 'Google sign-in failed.'); setHeldGoogleToken(null); }
+            } catch (err) { setError(err.response?.data?.message || tl('login.errors.googleSignin')); setHeldGoogleToken(null); }
             finally { setLoading(false); }
           },
         });
@@ -391,7 +391,7 @@ const Login = () => {
         if (container) window.google.accounts.id.renderButton(container, { theme: 'filled_black', size: 'large', width: 320 });
       }
     };
-    script.onerror = () => setError('Failed to load Google Identity Services script.');
+    script.onerror = () => setError(tl('login.errors.googleScript'));
     return () => { if (script?.parentNode) script.parentNode.removeChild(script); };
   }, []);
 
@@ -436,7 +436,7 @@ const Login = () => {
 
             {/* stats row */}
             <div className="flex justify-center gap-8 mt-8">
-              {[['500+','Bots'],['10K+','Users'],['99.9%','Uptime']].map(([val, lbl]) => (
+              {[['500+', tl('login.stats.bots')], ['10K+', tl('login.stats.users')], ['99.9%', tl('login.stats.uptime')]].map(([val, lbl]) => (
                 <div key={lbl} className="text-center">
                   <div className="text-lg font-bold text-[#ffd700] gold-badge">{val}</div>
                   <div className="text-[11px] text-white/30 mt-0.5">{lbl}</div>
@@ -500,7 +500,7 @@ const Login = () => {
                     className={`w-full px-4 py-3 rounded-xl text-[14px] text-white outline-none transition-all duration-300
                       bg-white/[0.05] border ${focusedField === 'email' ? 'border-[#ffd700]/60 input-focused' : 'border-white/10'}
                       placeholder-white/30 focus:bg-white/[0.08]`}
-                    placeholder="you@example.com" />
+                    placeholder={tl('login.placeholders.email')} />
                 </div>
 
                 {/* Password */}
@@ -514,7 +514,7 @@ const Login = () => {
                     className={`w-full px-4 py-3 rounded-xl text-[14px] text-white outline-none transition-all duration-300
                       bg-white/[0.05] border ${focusedField === 'password' ? 'border-[#ffd700]/60 input-focused' : 'border-white/10'}
                       placeholder-white/30 focus:bg-white/[0.08]`}
-                    placeholder="••••••••" />
+                    placeholder={tl('login.placeholders.password')} />
                 </div>
 
                 {/* Remember / Forgot */}
@@ -556,7 +556,7 @@ const Login = () => {
                 {/* Divider */}
                 <div className="flex items-center gap-3 fade-up fade-up-3">
                   <div className="flex-1 h-px bg-white/10" />
-                  <span className="text-[11px] text-white/25 tracking-widest uppercase">or</span>
+                  <span className="text-[11px] text-white/25 tracking-widest uppercase">{tl('login.or')}</span>
                   <div className="flex-1 h-px bg-white/10" />
                 </div>
 

@@ -26,7 +26,7 @@ export const LanguageProvider = ({ children }) => {
     localStorage.setItem('language', language);
   }, [language]);
 
-  const t = (key) => {
+  const t = (key, replacements = {}) => {
     const keys = key.split('.');
     let value = translations[language];
     let fallbackValue = translations.en;
@@ -36,7 +36,15 @@ export const LanguageProvider = ({ children }) => {
       fallbackValue = fallbackValue?.[k];
     }
 
-    return value || fallbackValue || key;
+    const resolved = value || fallbackValue || key;
+
+    if (typeof resolved !== 'string') {
+      return resolved;
+    }
+
+    return resolved.replace(/\{\{(\w+)\}\}/g, (_, token) => {
+      return Object.prototype.hasOwnProperty.call(replacements, token) ? String(replacements[token]) : `{{${token}}}`;
+    });
   };
 
   const changeLanguage = (lang) => {

@@ -86,35 +86,79 @@
     }
   },
   "marketplace": {
+    "kicker": "Economía Autónoma",
     "title": "Mercado Elite de Bots",
-    "subtitle": "Economía Autónoma",
-    "description": "Descubre y adquiere agentes automatizados de alto rendimiento para protocolos de mensajería globales.",
-    "searchPlaceholder": "Buscar por nombre o plataforma...",
-    "search": "Buscar",
-    "loading": "Cargando...",
-    "noResults": "No se encontraron bots",
-    "noResultsDesc": "Intenta ajustar tu búsqueda o filtros.",
-    "sortNewest": "Más Recientes",
-    "sortPopular": "Más Populares",
-    "sortPriceAsc": "Precio: Menor a Mayor",
-    "sortPriceDesc": "Precio: Mayor a Menor",
-    "allPlatforms": "Todos",
+    "subtitle": "Descubre y adquiere agentes automatizados de alto rendimiento diseñados para escalar en protocolos de mensajería globales.",
+    "searchPlaceholder": "Buscar por dominio de inteligencia o protocolo...",
+    "search": "BUSCAR",
+    "loading": "Sincronizando la cuadrícula neuronal",
+    "empty": {
+      "title": "Búsqueda sin resultados",
+      "default": "Reduce la sensibilidad de los filtros o prueba otra frecuencia.",
+      "filtered": "Reduce la sensibilidad de los filtros o prueba otra frecuencia."
+    },
+    "filters": {
+      "allPlatforms": "Todos",
+      "email": "Email",
+      "whatsapp": "WhatsApp",
+      "telegram": "Telegram",
+      "discord": "Discord",
+      "slack": "Slack",
+      "instagram": "Instagram"
+    },
+    "sort": {
+      "newest": "Más recientes",
+      "popular": "Más populares",
+      "priceAsc": "Precio: menor a mayor",
+      "priceDesc": "Precio: mayor a menor"
+    },
+    "errors": {
+      "load": "No se pudo cargar el mercado.",
+      "loginToPurchase": "Se requiere autorización. Inicia sesión como Comprador.",
+      "buyerOnly": "Acción restringida. Solo las cuentas de Comprador pueden adquirir bots.",
+      "resources": "No se pudieron cargar los recursos del bot."
+    },
+    "success": {
+      "purchaseComplete": "🎉 ¡La compra se completó con éxito!"
+    },
     "free": "GRATIS",
-    "by": "por",
-    "dossier": "Detalles",
-    "acquire": "Adquirir",
-    "viewResources": "Ver Recursos",
-    "initiateAcquisition": "Comprar Ahora",
-    "authRequired": "Inicia sesión como Comprador para adquirir bots.",
-    "buyerOnly": "Solo las cuentas de Comprador pueden adquirir bots.",
-    "purchaseSuccess": "¡Compra completada con éxito!",
-    "failedLoad": "No se pudo cargar el mercado."
+    "bySeller": "por {{seller}}",
+    "details": "Detalles",
+    "viewResources": "Recursos",
+    "buyNow": "Adquirir",
+    "opening": "Abriendo...",
+    "summary": "Resumen arquitectónico",
+    "noDescription": "No hay un dossier detallado disponible para esta unidad.",
+    "capabilities": "Capacidades del sistema",
+    "purchaseBot": "Iniciar adquisición",
+    "openingCheckout": "Abriendo pago...",
+    "sales": "{{count}} ventas",
+    "moreFeatures": "+{{count}} más",
+    "listedOn": "Publicado {{date}}",
+    "features": "Características",
+    "close": "Cerrar",
+    "resources": {
+      "title": "Manifiesto de Inteligencia",
+      "loading": "Descentralizando activos...",
+      "script": "Script neuronal",
+      "copyScript": "Copiar al portapapeles",
+      "copied": "Copiado al portapapeles",
+      "github": "Registro de origen",
+      "openGithub": "Explorar red",
+      "config": "Parámetros arquitectónicos",
+      "empty": "Aún no hay recursos disponibles para este bot.",
+      "failed": "No se pudieron recuperar los activos neuronales de la red."
+    }
   },
   "login": {
     "title": "Bienvenido de nuevo",
     "subtitle": "Inicia sesión en tu cuenta de Botify",
     "emailLabel": "Correo Electrónico",
     "passwordLabel": "Contraseña",
+    "placeholders": {
+      "email": "tu@email.com",
+      "password": "••••••••"
+    },
     "rememberMe": "Recordarme",
     "forgotPassword": "¿Olvidaste tu contraseña?",
     "signingIn": "Iniciando sesión…",
@@ -126,7 +170,19 @@
     "tagline": "El mercado de bots de próxima generación para WhatsApp, Telegram y Discord.",
     "authenticated": "Autenticado",
     "welcomeBack": "Bienvenido de nuevo",
-    "redirecting": "Llevándote a tu panel..."
+    "redirecting": "Llevándote a tu panel...",
+    "stats": {
+      "bots": "Bots",
+      "users": "Usuarios",
+      "uptime": "Disponibilidad"
+    },
+    "errors": {
+      "googleSignup": "No se pudo completar el registro con Google.",
+      "googleSignin": "Error al iniciar sesión con Google.",
+      "googleScript": "No se pudo cargar el script de Google Identity Services.",
+      "navigate": "No se pudo navegar al panel. Refresca e inténtalo de nuevo.",
+      "loginFailed": "El inicio de sesión falló. Inténtalo de nuevo."
+    }
   },
   "signup": {
     "title": "Crea tu cuenta",
