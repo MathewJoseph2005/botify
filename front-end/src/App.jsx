@@ -19,6 +19,7 @@ const BotCreationPage        = lazy(() => import('./pages/BotCreationPage'));
 const CreateMarketplaceBotPage = lazy(() => import('./pages/CreateMarketplaceBotPage'));
 const FAQPage                = lazy(() => import('./pages/FAQPage'));
 const VibeCode               = lazy(() => import('./pages/VibeCode'));
+const VibeCredits            = lazy(() => import('./pages/VibeCredits'));
 const Unauthorized           = lazy(() => import('./pages/Unauthorized'));
 const ForgotPassword         = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword          = lazy(() => import('./pages/ResetPassword'));
@@ -46,7 +47,7 @@ function App() {
   }
 
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <div className="min-h-screen bg-gray-50">
         <Navbar />
         <Suspense fallback={<PageLoader />}>
@@ -91,6 +92,9 @@ function App() {
             } />
             <Route path="/vibe-code" element={
               <PrivateRoute allowedRoles={[1, 2, 3]}><VibeCode /></PrivateRoute>
+            } />
+            <Route path="/vibe-code/credits" element={
+              <PrivateRoute allowedRoles={[1, 2, 3]}><VibeCredits /></PrivateRoute>
             } />
 
             {/* 404 */}

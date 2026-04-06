@@ -355,44 +355,60 @@ const Login = () => {
   useEffect(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
     if (!clientId) return;
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client'; script.async = true; script.defer = true;
-    document.body.appendChild(script);
-    script.onload = () => {
-      if (window.google?.accounts && clientId) {
-        window.google.accounts.id.initialize({
-          client_id: clientId,
-          callback: async (response) => {
-            const id_token = response?.credential; if (!id_token) return;
-            setHeldGoogleToken(id_token); setError(''); setLoading(true);
-            try {
-              const res = await authAPI.googleSignIn({ id_token });
-              if (res.data.success) {
-                if (res.data.isNewUser) { setShowRoleModal(true); }
-                else {
-                  setSubmitState('success'); triggerParticles();
-                  login(res.data.token, res.data.user);
-                  // Show cinematic portal
-                  setPortalUser(res.data.user);
-                  setShowPortal(true);
-                  setTimeout(() => {
-                    const r = res.data.user.role_name;
-                    if (r === 'admin') navigate('/dashboard/admin');
-                    else if (r === 'seller') navigate('/dashboard/seller');
-                    else navigate('/dashboard/buyer');
-                  }, 2200);
-                }
-              }
-            } catch (err) { setError(err.response?.data?.message || tl('login.errors.googleSignin')); setHeldGoogleToken(null); }
-            finally { setLoading(false); }
-          },
-        });
-        const container = document.getElementById('googleSignInDiv');
-        if (container) window.google.accounts.id.renderButton(container, { theme: 'filled_black', size: 'large', width: 320 });
+    const scriptId = 'google-gsi-client';
+    const existingScript = document.getElementById(scriptId);
+    const script = existingScript || document.createElement('script');
+    if (!existingScript) {
+      script.id = scriptId;
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      document.body.appendChild(script);
+    }
+    const initializeGoogleSignIn = () => {
+      if (!window.google?.accounts || !clientId || window.__botifyGoogleGisInitialized) {
+        return;
       }
+
+      window.__botifyGoogleGisInitialized = true;
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: async (response) => {
+          const id_token = response?.credential; if (!id_token) return;
+          setHeldGoogleToken(id_token); setError(''); setLoading(true);
+          try {
+            const res = await authAPI.googleSignIn({ id_token });
+            if (res.data.success) {
+              if (res.data.isNewUser) { setShowRoleModal(true); }
+              else {
+                setSubmitState('success'); triggerParticles();
+                login(res.data.token, res.data.user);
+                // Show cinematic portal
+                setPortalUser(res.data.user);
+                setShowPortal(true);
+                setTimeout(() => {
+                  const r = res.data.user.role_name;
+                  if (r === 'admin') navigate('/dashboard/admin');
+                  else if (r === 'seller') navigate('/dashboard/seller');
+                  else navigate('/dashboard/buyer');
+                }, 2200);
+              }
+            }
+          } catch (err) { setError(err.response?.data?.message || tl('login.errors.googleSignin')); setHeldGoogleToken(null); }
+          finally { setLoading(false); }
+        },
+      });
+
+      const container = document.getElementById('googleSignInDiv');
+      if (container) window.google.accounts.id.renderButton(container, { theme: 'filled_black', size: 'large', width: 320 });
+    };
+
+    script.onload = initializeGoogleSignIn;
+    if (window.google?.accounts) {
+      initializeGoogleSignIn();
     };
     script.onerror = () => setError(tl('login.errors.googleScript'));
-    return () => { if (script?.parentNode) script.parentNode.removeChild(script); };
+    return () => { /* Keep GIS script mounted to avoid duplicate initialization warnings. */ };
   }, []);
 
   const btnClass = submitState === 'success' ? 'btn-success success-pulse'

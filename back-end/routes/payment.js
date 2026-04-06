@@ -2,6 +2,11 @@ import express from 'express';
 import { createClient } from '@supabase/supabase-js';
 import verifyToken, { requireRole } from '../middleware/auth.js';
 import dotenv from 'dotenv';
+import {
+  getOrCreateUserCredits,
+  listCreditPlans,
+  addCredits,
+} from '../services/creditService.js';
 
 dotenv.config();
 
@@ -28,6 +33,162 @@ function calculateFees(amount) {
     sellerReceives: amount - platformFee,
   };
 }
+
+/**
+ * GET /api/payments/credits/balance
+ * Get authenticated user's credit balance.
+ */
+router.get('/credits/balance', verifyToken, async (req, res) => {
+  try {
+    const credits = await getOrCreateUserCredits(req.user.user_id);
+    return res.json({
+      success: true,
+      data: {
+        credits: Number(credits.credits_balance),
+        totalPurchased: Number(credits.total_purchased || 0),
+        totalUsed: Number(credits.total_used || 0),
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * GET /api/payments/credits/plans
+ * Get available credit purchase plans.
+ */
+router.get('/credits/plans', verifyToken, async (_req, res) => {
+  try {
+    const plans = await listCreditPlans();
+    return res.json({
+      success: true,
+      data: plans,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * POST /api/payments/credits/create-checkout-session
+ * Create demo checkout for credit purchase.
+ */
+router.post('/credits/create-checkout-session', verifyToken, async (req, res) => {
+  try {
+    const { plan_id } = req.body;
+    if (!plan_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'plan_id is required',
+      });
+    }
+
+    const plans = await listCreditPlans();
+    const plan = plans.find((p) => String(p.id) === String(plan_id));
+    if (!plan) {
+      return res.status(404).json({
+        success: false,
+        error: 'Credit plan not found',
+      });
+    }
+
+    if (DEMO_MODE) {
+      return res.json({
+        success: true,
+        data: {
+          sessionId: `demo-credit-session-${Date.now()}`,
+          purchaseId: `demo-credit-${Date.now()}`,
+          amount: Number(plan.price_usd),
+          credits: Number(plan.credits),
+          plan,
+          demoMode: true,
+        },
+        message: 'Demo credit checkout session created',
+      });
+    }
+
+    return res.status(501).json({
+      success: false,
+      error: 'Live Stripe checkout for credits is not implemented yet',
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * POST /api/payments/credits/confirm-demo-payment
+ * Confirm demo card payment and add credits to user wallet.
+ */
+router.post('/credits/confirm-demo-payment', verifyToken, async (req, res) => {
+  try {
+    const { plan_id, cardNumber, expiryDate, cvc } = req.body;
+    const user_id = req.user.user_id;
+
+    if (!plan_id || !cardNumber || !expiryDate || !cvc) {
+      return res.status(400).json({
+        success: false,
+        error: 'plan_id, cardNumber, expiryDate, and cvc are required',
+      });
+    }
+
+    const plans = await listCreditPlans();
+    const plan = plans.find((p) => String(p.id) === String(plan_id));
+    if (!plan) {
+      return res.status(404).json({
+        success: false,
+        error: 'Credit plan not found',
+      });
+    }
+
+    const last4 = String(cardNumber).slice(-4);
+    if (last4 === '0002') {
+      return res.status(400).json({
+        success: false,
+        error: 'Demo payment declined (test card ending in 0002)',
+      });
+    }
+
+    const updated = await addCredits({
+      userId: user_id,
+      credits: Number(plan.credits),
+      amountUsd: Number(plan.price_usd),
+      source: 'purchase',
+      reference: `demo-credit-${Date.now()}`,
+      metadata: {
+        plan_id: String(plan.id),
+        card_last4: last4,
+        demo_mode: true,
+      },
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        credits: Number(updated.credits_balance),
+        purchasedCredits: Number(plan.credits),
+        amountPaid: Number(plan.price_usd),
+        plan,
+      },
+      message: `Purchased ${plan.credits} credits successfully`,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
 
 /**
  * POST /api/payments/create-checkout-session

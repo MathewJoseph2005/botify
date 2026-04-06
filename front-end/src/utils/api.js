@@ -104,6 +104,10 @@ export const marketplaceAPI = {
 export const paymentsAPI = {
   createCheckoutSession: (data) => api.post('/payments/create-checkout-session', data),
   confirmDemoPayment: (data) => api.post('/payments/confirm-demo-payment', data),
+  getCreditsBalance: () => api.get('/payments/credits/balance'),
+  getCreditPlans: () => api.get('/payments/credits/plans'),
+  createCreditsCheckoutSession: (data) => api.post('/payments/credits/create-checkout-session', data),
+  confirmDemoCreditsPayment: (data) => api.post('/payments/credits/confirm-demo-payment', data),
   getSellerWallet: () => api.get('/payments/seller/wallet'),
   getWalletTransactions: (params) => api.get('/payments/seller/wallet/transactions', { params }),
   getBankAccounts: () => api.get('/payments/seller/bank-accounts'),
@@ -117,6 +121,14 @@ export const paymentsAPI = {
 export const vibeCodeAPI = {
   getOptions: () => api.get('/vibecode/options'),
   generate: (data) => api.post('/vibecode/generate', data),
+  runSandbox: (data) => api.post('/vibecode/run-sandbox', data),
+  stopSandbox: (sessionId) => api.post(`/vibecode/stop-sandbox/${sessionId}`),
+  getSandboxLogs: (sessionId, cursor = 0) =>
+    api.get(`/vibecode/sandbox-logs/${sessionId}`, { params: { cursor } }),
+  saveSession: (data) => api.post('/vibecode/save-session', data),
+  loadSession: () => api.get('/vibecode/load-session'),
+  deleteSession: () => api.post('/vibecode/delete-session'),
+  listSessions: () => api.get('/vibecode/list-sessions'),
 };
 
 // Auth helper functions
