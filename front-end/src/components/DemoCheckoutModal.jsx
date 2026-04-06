@@ -113,7 +113,7 @@ export default function DemoCheckoutModal({ bot, isOpen, onClose, onSuccess }) {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg max-w-md w-full shadow-xl">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-lg text-white">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-lg text-black">
           <h2 className="text-xl font-bold">
             {step === 'success' ? '✅ Payment Successful' : `Checkout - ${bot.name}`}
           </h2>
@@ -187,7 +187,7 @@ export default function DemoCheckoutModal({ bot, isOpen, onClose, onSuccess }) {
                   onChange={(e) => setCardNumber(e.target.value.replace(/\D/g, '').slice(0, 16))}
                   placeholder="4242 4242 4242 4242"
                   maxLength="19"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-black caret-black focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <p className="text-xs text-gray-500 mt-1">Use: 4242... (success) or ...0002 (decline)</p>
               </div>
@@ -203,7 +203,7 @@ export default function DemoCheckoutModal({ bot, isOpen, onClose, onSuccess }) {
                     onChange={(e) => setExpiry(e.target.value)}
                     placeholder="12/25"
                     maxLength="5"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-black caret-black focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
@@ -216,7 +216,7 @@ export default function DemoCheckoutModal({ bot, isOpen, onClose, onSuccess }) {
                     onChange={(e) => setCvc(e.target.value.replace(/\D/g, '').slice(0, 3))}
                     placeholder="123"
                     maxLength="3"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-black caret-black focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
