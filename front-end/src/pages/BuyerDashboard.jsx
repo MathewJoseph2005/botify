@@ -279,8 +279,72 @@ const BuyerDashboard = () => {
                    </div>
 
                    <div className="space-y-4">
-                      {accessModal.resource?.script_link && (
-                        <a href={accessModal.resource.script_link} target="_blank" rel="noopener noreferrer" 
+                      {accessModal.resource?.config_json?.buyer_specs && (
+                        <div className="rounded-2xl bg-white/5 border border-white/10 p-5 space-y-4">
+                          <p className="text-[10px] font-bold text-[#ffd700] uppercase tracking-[0.16em]">Buyer Setup Specifications</p>
+
+                          {Array.isArray(accessModal.resource.config_json.buyer_specs.prerequisites) && accessModal.resource.config_json.buyer_specs.prerequisites.length > 0 && (
+                            <div>
+                              <p className="text-[10px] text-white/35 uppercase tracking-widest mb-2">Prerequisites</p>
+                              <ul className="space-y-1 text-xs text-white/75">
+                                {accessModal.resource.config_json.buyer_specs.prerequisites.map((item, idx) => (
+                                  <li key={idx}>- {item}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {Array.isArray(accessModal.resource.config_json.buyer_specs.setup_steps) && accessModal.resource.config_json.buyer_specs.setup_steps.length > 0 && (
+                            <div>
+                              <p className="text-[10px] text-white/35 uppercase tracking-widest mb-2">Setup Steps</p>
+                              <ol className="space-y-1 text-xs text-white/75">
+                                {accessModal.resource.config_json.buyer_specs.setup_steps.map((item, idx) => (
+                                  <li key={idx}>{idx + 1}. {item}</li>
+                                ))}
+                              </ol>
+                            </div>
+                          )}
+
+                          {accessModal.resource.config_json.buyer_specs.usage_instructions && (
+                            <div>
+                              <p className="text-[10px] text-white/35 uppercase tracking-widest mb-2">Usage Guide</p>
+                              <p className="text-xs text-white/75 leading-relaxed">{accessModal.resource.config_json.buyer_specs.usage_instructions}</p>
+                            </div>
+                          )}
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {accessModal.resource.config_json.buyer_specs.docs_link && (
+                              <a
+                                href={accessModal.resource.config_json.buyer_specs.docs_link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-4 py-2 rounded-lg border border-[#ffd700]/20 text-[#ffd700] text-[11px] font-bold uppercase tracking-widest hover:bg-[#ffd700]/10 text-center"
+                              >
+                                Open Docs
+                              </a>
+                            )}
+                            {accessModal.resource.config_json.buyer_specs.demo_link && (
+                              <a
+                                href={accessModal.resource.config_json.buyer_specs.demo_link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-4 py-2 rounded-lg border border-sky-400/20 text-sky-300 text-[11px] font-bold uppercase tracking-widest hover:bg-sky-400/10 text-center"
+                              >
+                                Open Demo
+                              </a>
+                            )}
+                          </div>
+
+                          {accessModal.resource.config_json.buyer_specs.support_contact && (
+                            <p className="text-[11px] text-white/65">
+                              Support: <span className="text-[#ffd700]">{accessModal.resource.config_json.buyer_specs.support_contact}</span>
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {(accessModal.resource?.script_link || accessModal.resource?.github_link) && (
+                        <a href={accessModal.resource.script_link || accessModal.resource.github_link} target="_blank" rel="noopener noreferrer" 
                           className="flex items-center justify-between p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-[#ffd700]/40 transition-all group">
                            <div>
                               <p className="text-xs font-bold text-white mb-1">Source Manifesto</p>
@@ -289,10 +353,29 @@ const BuyerDashboard = () => {
                            <span className="text-[#ffd700] transition-transform group-hover:translate-x-1">LINK &rarr;</span>
                         </a>
                       )}
+
+                      {accessModal.resource?.bot_script && (
+                        <div className="p-5 rounded-2xl bg-white/5 border border-white/10">
+                          <div className="flex items-center justify-between mb-3">
+                            <p className="text-xs font-bold text-white">Embedded Bot Script</p>
+                            <button
+                              type="button"
+                              onClick={() => navigator.clipboard.writeText(accessModal.resource.bot_script)}
+                              className="text-[10px] text-[#ffd700] font-bold uppercase tracking-widest hover:underline"
+                            >
+                              Copy Script
+                            </button>
+                          </div>
+                          <pre className="max-h-44 overflow-auto rounded-lg bg-black/30 p-3 text-[11px] text-white/70 whitespace-pre-wrap break-words">
+                            {accessModal.resource.bot_script}
+                          </pre>
+                        </div>
+                      )}
                       
-                      {accessModal.resource?.custom_links && accessModal.resource.custom_links.length > 0 && (
+                      {(accessModal.resource?.custom_links || accessModal.resource?.config_json?.custom_links) &&
+                        (accessModal.resource.custom_links || accessModal.resource.config_json?.custom_links || []).length > 0 && (
                         <div className="space-y-3">
-                           {accessModal.resource.custom_links.map((link, idx) => (
+                           {(accessModal.resource.custom_links || accessModal.resource.config_json?.custom_links || []).map((link, idx) => (
                              <a key={idx} href={link.url} target="_blank" rel="noopener noreferrer"
                                className="flex items-center justify-between p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-[#ffd700]/40 transition-all group">
                                 <div>
@@ -305,7 +388,9 @@ const BuyerDashboard = () => {
                         </div>
                       )}
 
-                      {!accessModal.resource?.script_link && (!accessModal.resource?.custom_links || accessModal.resource.custom_links.length === 0) && (
+                      {!accessModal.resource?.script_link && !accessModal.resource?.github_link && !accessModal.resource?.bot_script &&
+                        (!accessModal.resource?.custom_links || accessModal.resource.custom_links.length === 0) &&
+                        (!accessModal.resource?.config_json?.custom_links || accessModal.resource.config_json.custom_links.length === 0) && (
                         <div className="py-8 text-center text-white/20 italic text-sm">
                            No provisioning resources attached by seller.
                         </div>

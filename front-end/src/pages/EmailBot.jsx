@@ -17,6 +17,19 @@ const getFileIcon = (filename) => {
   return '📎';
 };
 
+const getMinScheduleDateTime = () => {
+  // Keep a 1-minute buffer so the selected value is always safely in the future.
+  const minDate = new Date(Date.now() + 60 * 1000);
+  minDate.setSeconds(0, 0);
+  return minDate.toISOString().slice(0, 16);
+};
+
+const isFutureSchedule = (value) => {
+  if (!value) return true;
+  const selected = new Date(value);
+  return !Number.isNaN(selected.getTime()) && selected.getTime() > Date.now();
+};
+
 const EMAIL_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
   @keyframes twinkle { 0%,100%{opacity:0.1;transform:scale(0.8)} 50%{opacity:1;transform:scale(1.1);box-shadow:0 0 8px 1px rgba(255,255,255,0.3)} }
@@ -124,6 +137,7 @@ const EmailBot = () => {
   const [excelFile, setExcelFile] = useState(null);
   const [attachments, setAttachments] = useState([]);
   const [dragOver, setDragOver] = useState(false);
+  const [minScheduleTime, setMinScheduleTime] = useState(getMinScheduleDateTime());
   
   // ── Manual Entry State ───────────────────────────────────────────────────
   const [campaignMode, setCampaignMode] = useState('file'); // 'file' or 'manual'
@@ -145,6 +159,21 @@ const EmailBot = () => {
     fetchBots();
     fetchCampaigns();
   }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMinScheduleTime(getMinScheduleDateTime());
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (scheduledTime && !isFutureSchedule(scheduledTime)) {
+      setScheduledTime('');
+      setResult({ type: 'error', message: 'Dispatch time must be in the future.' });
+    }
+  }, [scheduledTime]);
 
   const fetchBots = async () => {
     try {
@@ -246,6 +275,9 @@ const EmailBot = () => {
     if (!selectedBotId) { setResult({ type: 'error', message: 'Select a bot first.' }); return; }
     if (!subject || !messageBody) {
       setResult({ type: 'error', message: 'Subject and message body are required.' }); return;
+    }
+    if (scheduledTime && !isFutureSchedule(scheduledTime)) {
+      setResult({ type: 'error', message: 'Please choose a future dispatch time.' }); return;
     }
 
     // Validate based on mode
@@ -705,7 +737,17 @@ const EmailBot = () => {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-[10px] font-bold text-white/30 uppercase tracking-widest mb-2 ml-1">Dispatch Time</label>
-                    <input type="datetime-local" value={scheduledTime} onChange={e => setScheduledTime(e.target.value)}
+                    <input type="datetime-local" value={scheduledTime}
+                      min={minScheduleTime}
+                      step={60}
+                      onChange={(e) => {
+                        const nextValue = e.target.value;
+                        if (!nextValue || isFutureSchedule(nextValue)) {
+                          setScheduledTime(nextValue);
+                          return;
+                        }
+                        setResult({ type: 'error', message: 'Dispatch time must be in the future.' });
+                      }}
                       className="w-full px-5 py-3.5 rounded-xl input-glass text-sm"
                       style={{ colorScheme: 'dark' }} />
                   </div>

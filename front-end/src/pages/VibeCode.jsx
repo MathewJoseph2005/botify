@@ -7,11 +7,11 @@ import { paymentsAPI, vibeCodeAPI } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 
 const BUILD_STEPS = [
-  'Analyzing your prompt and extracting bot intent...',
-  'Choosing full-stack architecture and folder structure...',
-  'Generating backend API + frontend client scaffolding...',
-  'Validating scripts, dependencies, and startup flow...',
-  'Packaging workspace files for editor preview...',
+  '🔍 Analyzing your vision and bot features...',
+  '🏗️ Designing the perfect stack and structure...',
+  '⚙️ Crafting backend APIs and frontend scaffolding...',
+  '✅ Quality checks and dependency validation...',
+  '📦 Packaging everything you need to run it...',
 ];
 
 const SESSION_STORAGE_PREFIX = 'botify:vibe-session';
@@ -71,7 +71,7 @@ export default function VibeCode() {
     {
       role: 'assistant',
       content:
-        'Welcome to Isolated Workspace. Describe the bot you want, and I will generate a runnable project file system.',
+        '👋 Hey there! I\'m Vibe Coder, your AI bot architect. Tell me what kind of bot you\'d like to build—what platform, what it should do, and I\'ll generate a complete, ready-to-run project for you. Let\'s create something awesome! 🚀',
     },
   ]);
   const [message, setMessage] = useState('');
@@ -79,8 +79,7 @@ export default function VibeCode() {
   const [files, setFiles] = useState(INITIAL_FILES);
   const [selectedFilePath, setSelectedFilePath] = useState(INITIAL_FILES[0].path);
   const [terminalLogs, setTerminalLogs] = useState([
-    '[workspace] Isolated workspace initialized.',
-    '[workspace] Awaiting instructions...',
+    '✨ Workspace ready! Waiting for your creative prompt...',
   ]);
   const [credits, setCredits] = useState(null);
   const [sandboxSessionId, setSandboxSessionId] = useState(null);
@@ -501,14 +500,13 @@ export default function VibeCode() {
       {
         role: 'assistant',
         content:
-          'Welcome to Isolated Workspace. Describe the bot you want, and I will generate a runnable project file system.',
+          '👋 Fresh start! I\'m ready to build something new. What bot would you like to create? 🎨',
       },
     ]);
     setFiles(INITIAL_FILES);
     setSelectedFilePath(INITIAL_FILES[0].path);
     setTerminalLogs([
-      '[workspace] Isolated workspace initialized.',
-      '[workspace] Awaiting instructions...',
+      '✨ Workspace ready! Waiting for your creative prompt...',
     ]);
     setMessage('');
     setSandboxSessionId(null);
@@ -548,6 +546,7 @@ export default function VibeCode() {
           </div>
         </header>
 
+        {!hasSubmittedPrompt && (
         <section className="rounded-2xl border border-sky-300/25 bg-[radial-gradient(circle_at_18%_10%,rgba(99,179,237,0.28),transparent_40%),radial-gradient(circle_at_82%_12%,rgba(56,189,248,0.2),transparent_44%),linear-gradient(140deg,#0a1322,#0b1628_45%,#0d1a2f)] px-6 py-8 relative overflow-hidden">
           <div className="absolute inset-x-0 bottom-[-32px] h-[110px] bg-[radial-gradient(ellipse_at_center,rgba(125,211,252,0.42)_0%,rgba(125,211,252,0.1)_40%,transparent_74%)]" />
           <div className="relative z-10 max-w-3xl mx-auto text-center">
@@ -577,10 +576,11 @@ export default function VibeCode() {
             </div>
           </div>
         </section>
+        )}
 
         {hasSubmittedPrompt ? (
-        <div className="flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <section className="h-full rounded-2xl border border-cyan-400/20 bg-[#0b1018]/95 shadow-[0_0_40px_rgba(24,120,170,0.12)] flex flex-col">
+        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-4 auto-rows-fr">
+        <section className="min-h-0 rounded-2xl border border-cyan-400/20 bg-[#0b1018]/95 shadow-[0_0_40px_rgba(24,120,170,0.12)] flex flex-col overflow-hidden">
           <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
             <div>
               <h1 className="text-sm md:text-base font-semibold">Isolated Workspace Chat</h1>
@@ -591,7 +591,7 @@ export default function VibeCode() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
             {chatHistory.map((entry, index) => (
               <div
                 key={`${entry.role}-${index}`}
@@ -609,6 +609,26 @@ export default function VibeCode() {
                 Building your workspace, step by step...
               </div>
             )}
+          </div>
+
+          <div className="border-t border-white/10 p-3 bg-[#0a0f17]">
+            <div className="rounded-2xl border border-white/15 bg-[#151c28] p-2 flex gap-2">
+              <textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Tell me what to build next..."
+                rows={2}
+                className="flex-1 rounded-xl bg-[#0f1522] border border-white/10 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/30"
+              />
+              <button
+                type="button"
+                onClick={handleSend}
+                disabled={isGenerating || !message.trim()}
+                className="self-end rounded-xl px-4 py-2 text-sm font-semibold bg-gradient-to-r from-cyan-400 to-sky-500 text-black disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isGenerating ? 'Sending...' : 'Send'}
+              </button>
+            </div>
           </div>
         </section>
 
@@ -676,7 +696,7 @@ export default function VibeCode() {
             </div>
           </div>
 
-          <div className="h-[30%] min-h-0 bg-[#070b11] text-green-300 font-mono text-xs overflow-y-auto p-3 space-y-1">
+          <div className="h-auto max-h-64 min-h-[120px] bg-[#070b11] text-green-300 font-mono text-xs overflow-y-auto p-3 space-y-1">
             <div className="text-[11px] uppercase tracking-[0.2em] text-white/40 mb-2 flex items-center justify-between">
               <span>Terminal</span>
               <div className="flex items-center gap-2">
@@ -720,7 +740,7 @@ export default function VibeCode() {
             </div>
             <h2 className="text-2xl font-bold text-white mb-2">Lab is ready</h2>
             <p className="text-white/70 text-sm leading-relaxed">
-              Send your bot idea above to populate the editor, chat, and terminal. Then hit <span className="font-semibold text-cyan-300">Test Bot</span> to spin up a live VM preview.
+              Describe your bot idea above—tell me the platform, what it should do, and any special features. I'll generate a complete working code in the editor. Then hit <span className="font-semibold text-cyan-300">Test Bot</span> to run it live! 🎯
             </p>
             <div className="mt-6 p-3 rounded-lg bg-cyan-500/10 border border-cyan-400/20">
               <p className="text-xs text-cyan-200">✨ Pro tip: Be specific about platform and behavior for best results</p>

@@ -364,6 +364,42 @@ const Marketplace = () => {
                   <p className="text-sm text-white/50 leading-relaxed italic">"{selectedBot.description || t('marketplace.noDescription')}"</p>
                 </div>
 
+                {selectedBot.config_json?.buyer_specs && (
+                  <div>
+                    <h4 className="text-[10px] font-bold text-[#ffd700] uppercase tracking-widest mb-3 opacity-60">Buyer Setup Specs</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                      {Array.isArray(selectedBot.config_json.buyer_specs.prerequisites) && selectedBot.config_json.buyer_specs.prerequisites.length > 0 && (
+                        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                          <p className="text-white/40 uppercase tracking-widest text-[9px] mb-2">Prerequisites</p>
+                          <ul className="space-y-1 text-white/70">
+                            {selectedBot.config_json.buyer_specs.prerequisites.slice(0, 4).map((item, idx) => (
+                              <li key={idx}>- {item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {Array.isArray(selectedBot.config_json.buyer_specs.setup_steps) && selectedBot.config_json.buyer_specs.setup_steps.length > 0 && (
+                        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                          <p className="text-white/40 uppercase tracking-widest text-[9px] mb-2">Setup Steps</p>
+                          <ul className="space-y-1 text-white/70">
+                            {selectedBot.config_json.buyer_specs.setup_steps.slice(0, 4).map((item, idx) => (
+                              <li key={idx}>{idx + 1}. {item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {selectedBot.config_json.buyer_specs.usage_instructions && (
+                        <div className="rounded-xl border border-white/10 bg-white/5 p-3 md:col-span-2">
+                          <p className="text-white/40 uppercase tracking-widest text-[9px] mb-2">Usage Guide</p>
+                          <p className="text-white/70 leading-relaxed">{selectedBot.config_json.buyer_specs.usage_instructions}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {selectedBot.features && selectedBot.features.length > 0 && (
                   <div>
                     <h4 className="text-[10px] font-bold text-[#ffd700] uppercase tracking-widest mb-3 opacity-60">{t('marketplace.capabilities')}</h4>
@@ -430,6 +466,42 @@ const Marketplace = () => {
                </div>
              ) : resourceModal.resource ? (
                <div className="space-y-8">
+                  {resourceModal.resource.config_json?.buyer_specs && (
+                    <div className="space-y-3">
+                      <h4 className="text-[10px] font-bold text-[#ffd700] uppercase tracking-widest opacity-60">Buyer Setup Specifications</h4>
+                      <div className="rounded-2xl bg-white/5 border border-white/10 p-5 space-y-4 text-xs">
+                        {Array.isArray(resourceModal.resource.config_json.buyer_specs.prerequisites) && resourceModal.resource.config_json.buyer_specs.prerequisites.length > 0 && (
+                          <div>
+                            <p className="text-white/35 uppercase tracking-widest text-[10px] mb-2">Prerequisites</p>
+                            <ul className="space-y-1 text-white/75">
+                              {resourceModal.resource.config_json.buyer_specs.prerequisites.map((item, idx) => (
+                                <li key={idx}>- {item}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {Array.isArray(resourceModal.resource.config_json.buyer_specs.setup_steps) && resourceModal.resource.config_json.buyer_specs.setup_steps.length > 0 && (
+                          <div>
+                            <p className="text-white/35 uppercase tracking-widest text-[10px] mb-2">Setup Steps</p>
+                            <ol className="space-y-1 text-white/75">
+                              {resourceModal.resource.config_json.buyer_specs.setup_steps.map((item, idx) => (
+                                <li key={idx}>{idx + 1}. {item}</li>
+                              ))}
+                            </ol>
+                          </div>
+                        )}
+
+                        {resourceModal.resource.config_json.buyer_specs.usage_instructions && (
+                          <div>
+                            <p className="text-white/35 uppercase tracking-widest text-[10px] mb-2">Usage Guide</p>
+                            <p className="text-white/75 leading-relaxed">{resourceModal.resource.config_json.buyer_specs.usage_instructions}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {resourceModal.resource.bot_script && (
                     <div className="space-y-3">
                       <div className="flex justify-between items-end">

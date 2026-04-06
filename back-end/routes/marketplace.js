@@ -701,6 +701,16 @@ router.get('/bot/:id/access', verifyToken, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Bot not found.' });
     }
 
+    const configLinks = Array.isArray(bot.config_json?.custom_links)
+      ? bot.config_json.custom_links.filter((item) => item && item.url)
+      : [];
+
+    const customLinks = [];
+    if (bot.github_link) {
+      customLinks.push({ label: 'GitHub Repository', url: bot.github_link });
+    }
+    customLinks.push(...configLinks);
+
     // Log access for audit trail
     try {
       await supabase
@@ -723,6 +733,9 @@ router.get('/bot/:id/access', verifyToken, async (req, res) => {
         platform: bot.platform,
         bot_script: bot.bot_script,
         github_link: bot.github_link,
+        // Compatibility aliases used by older buyer UI components.
+        script_link: bot.github_link,
+        custom_links: customLinks,
         config_json: bot.config_json,
       },
     });

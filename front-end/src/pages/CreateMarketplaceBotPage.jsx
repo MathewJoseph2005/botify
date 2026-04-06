@@ -27,13 +27,15 @@ const CREATE_STYLES = `
     background: rgba(255,255,255,0.04);
     border: 1px solid rgba(255,255,255,0.08);
     transition: all 0.3s ease;
-    color: white;
+    color: #f8d66d;
   }
   .input-glass:focus {
     background: rgba(255,255,255,0.08);
     border-color: rgba(255,215,0,0.4);
     box-shadow: 0 0 0 4px rgba(255,215,0,0.05);
   }
+  .input-glass::placeholder { color: rgba(255,255,255,0.35); }
+  .input-glass option { background: #111; color: #f5f5f5; }
   .gold-glow { text-shadow: 0 0 15px rgba(255, 215, 0, 0.3); }
 `;
 
@@ -50,6 +52,114 @@ const CATEGORIES = [
   'Customer Support', 'Marketing', 'Sales', 'Notifications', 
   'Analytics', 'Automation', 'Social Media', 'E-commerce', 'Other'
 ];
+
+const parseLineItems = (value) =>
+  String(value || '')
+    .split(/\r?\n|,/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+const PLATFORM_PROFILES = {
+  email: {
+    defaultCategory: 'Marketing',
+    suggestion: 'Optimized for batch campaigns, templates, and inbox workflows.',
+    integration: 'SMTP / API email transport',
+    defaultFeatures: ['Email Campaigns', 'Template Engine', 'Delivery Tracking'],
+  },
+  whatsapp: {
+    defaultCategory: 'Customer Support',
+    suggestion: 'Optimized for conversational support, quick replies, and notifications.',
+    integration: 'WhatsApp session + campaign dispatch',
+    defaultFeatures: ['Chat Automation', 'Broadcast Messaging', 'Session Management'],
+  },
+  telegram: {
+    defaultCategory: 'Automation',
+    suggestion: 'Optimized for command-based bots, menus, and subscriber workflows.',
+    integration: 'Telegram Bot API',
+    defaultFeatures: ['Commands', 'Subscriber Broadcast', 'Menu Flows'],
+  },
+  discord: {
+    defaultCategory: 'Community',
+    suggestion: 'Optimized for moderation, role workflows, and community engagement.',
+    integration: 'Discord bot gateway + slash commands',
+    defaultFeatures: ['Moderation', 'Role Automation', 'Community Alerts'],
+  },
+  slack: {
+    defaultCategory: 'Automation',
+    suggestion: 'Optimized for workspace notifications and productivity workflows.',
+    integration: 'Slack app events + webhooks',
+    defaultFeatures: ['Workspace Alerts', 'Workflow Actions', 'Channel Automation'],
+  },
+  instagram: {
+    defaultCategory: 'Social Media',
+    suggestion: 'Optimized for social engagement funnels and DM responses.',
+    integration: 'Instagram messaging integrations',
+    defaultFeatures: ['DM Automation', 'Lead Capture', 'Engagement Routing'],
+  },
+};
+
+const PLATFORM_SETUP_TEMPLATES = {
+  whatsapp: {
+    prerequisites: [
+      'Active WhatsApp account on mobile device',
+      'Botify server reachable from internet (if using webhooks)',
+      'Stable internet for QR/session sync',
+    ],
+    setup_steps: [
+      'Open WhatsApp module and connect account by scanning QR code',
+      'Configure default reply/campaign behavior in bot settings',
+      'Import recipient list and test with one internal number first',
+      'Enable campaign mode and schedule dispatch',
+    ],
+    usage_instructions:
+      'Use campaigns for bulk messaging and keep message templates short. Reconnect session if status shows disconnected before running broadcasts.',
+  },
+  telegram: {
+    prerequisites: [
+      'Telegram account and a bot token from BotFather',
+      'Bot token stored in secure environment settings',
+      'At least one test user subscribed to the bot',
+    ],
+    setup_steps: [
+      'Create bot via BotFather and copy token',
+      'Paste token into seller bot configuration',
+      'Define commands/menu flow and save settings',
+      'Run test broadcast to a small subscriber segment',
+    ],
+    usage_instructions:
+      'Use commands for user navigation and broadcasts for announcements. Monitor failures and remove invalid subscribers periodically.',
+  },
+  discord: {
+    prerequisites: [
+      'Discord server admin permissions',
+      'Discord bot token and application ID',
+      'Configured bot intents (message content and required events)',
+    ],
+    setup_steps: [
+      'Create Discord application and bot in Developer Portal',
+      'Invite bot to target server with required permissions',
+      'Configure slash commands, channels, and moderation rules',
+      'Validate command responses in a private test channel',
+    ],
+    usage_instructions:
+      'Use dedicated channels for bot actions, and restrict admin commands to trusted roles to avoid accidental server-wide actions.',
+  },
+  email: {
+    prerequisites: [
+      'SMTP credentials or API email provider key',
+      'Verified sender domain/email',
+      'Recipient list file (CSV/XLSX) or manual recipients',
+    ],
+    setup_steps: [
+      'Connect email sending account and verify test connection',
+      'Prepare email subject/body templates and personalization fields',
+      'Upload recipient list and validate columns',
+      'Schedule campaign and monitor delivery logs',
+    ],
+    usage_instructions:
+      'Warm up sender identity for large sends and start with small batches. Review bounce and failure logs before scaling campaign size.',
+  },
+};
 
 const CreateMarketplaceBotPage = () => {
   const navigate = useNavigate();
@@ -72,7 +182,16 @@ const CreateMarketplaceBotPage = () => {
     features: '',
     category: '',
     image_url: '',
+    prerequisites: '',
+    setup_steps: '',
+    usage_instructions: '',
+    support_contact: '',
+    docs_link: '',
+    demo_link: '',
   });
+
+  const selectedPlatformProfile = PLATFORM_PROFILES[form.platform] || null;
+  const selectedPlatformTemplate = PLATFORM_SETUP_TEMPLATES[form.platform] || null;
 
   useEffect(() => {
     fetchListings();
@@ -93,7 +212,21 @@ const CreateMarketplaceBotPage = () => {
   };
 
   const resetForm = () => {
-    setForm({ name: '', description: '', platform: '', price: '', features: '', category: '', image_url: '' });
+    setForm({
+      name: '',
+      description: '',
+      platform: '',
+      price: '',
+      features: '',
+      category: '',
+      image_url: '',
+      prerequisites: '',
+      setup_steps: '',
+      usage_instructions: '',
+      support_contact: '',
+      docs_link: '',
+      demo_link: '',
+    });
     setShowForm(false);
   };
 
@@ -117,6 +250,19 @@ const CreateMarketplaceBotPage = () => {
         : [],
       category: form.category || null,
       image_url: form.image_url || null,
+      config_json: {
+        platform_profile: form.platform,
+        integration_mode: selectedPlatformProfile?.integration || 'generic',
+        feature_mode: 'platform_optimized',
+        buyer_specs: {
+          prerequisites: parseLineItems(form.prerequisites),
+          setup_steps: parseLineItems(form.setup_steps),
+          usage_instructions: form.usage_instructions?.trim() || null,
+          support_contact: form.support_contact?.trim() || null,
+          docs_link: form.docs_link?.trim() || null,
+          demo_link: form.demo_link?.trim() || null,
+        },
+      },
     };
 
     try {
@@ -172,6 +318,22 @@ const CreateMarketplaceBotPage = () => {
     } catch (err) {
       setError(err.response?.data?.message || 'Status transition error.');
     }
+  };
+
+  const applyPlatformSpecsTemplate = () => {
+    if (!selectedPlatformTemplate) {
+      setError('Select WhatsApp, Telegram, Discord, or Email to auto-fill guided setup templates.');
+      return;
+    }
+
+    setError('');
+    setSuccess(`Applied ${form.platform} guided setup template.`);
+    setForm((prev) => ({
+      ...prev,
+      prerequisites: selectedPlatformTemplate.prerequisites.join('\n'),
+      setup_steps: selectedPlatformTemplate.setup_steps.join('\n'),
+      usage_instructions: selectedPlatformTemplate.usage_instructions,
+    }));
   };
 
   const publishedCount = listings.filter((l) => l.status === 'published').length;
@@ -242,7 +404,7 @@ const CreateMarketplaceBotPage = () => {
                       type="text"
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
-                      className="w-full px-5 py-3.5 rounded-xl input-glass outline-none text-sm placeholder-white/10"
+                      className="w-full px-5 py-3.5 rounded-xl input-glass outline-none text-sm"
                       placeholder="e.g. Nexus Protocol V.1"
                       required
                     />
@@ -254,7 +416,18 @@ const CreateMarketplaceBotPage = () => {
                         <button
                           key={p.value}
                           type="button"
-                          onClick={() => setForm({ ...form, platform: p.value })}
+                          onClick={() => setForm((prev) => {
+                            const profile = PLATFORM_PROFILES[p.value];
+                            const hasFeatures = Boolean(prev.features && prev.features.trim().length > 0);
+                            const hasCategory = Boolean(prev.category && prev.category.trim().length > 0);
+
+                            return {
+                              ...prev,
+                              platform: p.value,
+                              features: hasFeatures ? prev.features : (profile?.defaultFeatures || []).join(', '),
+                              category: hasCategory ? prev.category : (profile?.defaultCategory || ''),
+                            };
+                          })}
                           className={`py-3 rounded-xl border transition-all flex flex-col items-center gap-1 ${
                             form.platform === p.value ? 'bg-[#ffd700]/10 border-[#ffd700]/40 text-[#ffd700]' : 'bg-white/5 border-white/5 text-white/20 hover:border-white/10'
                           }`}
@@ -274,9 +447,14 @@ const CreateMarketplaceBotPage = () => {
                       value={form.description}
                       onChange={(e) => setForm({ ...form, description: e.target.value })}
                       rows={5}
-                      className="w-full px-5 py-3.5 rounded-xl input-glass outline-none text-sm placeholder-white/10 resize-none"
-                      placeholder="Defining the core intelligence and utility..."
+                      className="w-full px-5 py-3.5 rounded-xl input-glass outline-none text-sm resize-none"
+                      placeholder={selectedPlatformProfile?.suggestion || 'Defining the core intelligence and utility...'}
                     />
+                    {selectedPlatformProfile && (
+                      <p className="text-[11px] text-[#ffd700]/70 mt-2">
+                        Platform profile: {selectedPlatformProfile.integration}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -288,7 +466,7 @@ const CreateMarketplaceBotPage = () => {
                     type="number" step="0.01"
                     value={form.price}
                     onChange={(e) => setForm({ ...form, price: e.target.value })}
-                    className="w-full px-5 py-3.5 rounded-xl input-glass outline-none text-sm placeholder-white/10"
+                    className="w-full px-5 py-3.5 rounded-xl input-glass outline-none text-sm"
                     placeholder="29.99"
                     required
                   />
@@ -310,9 +488,97 @@ const CreateMarketplaceBotPage = () => {
                     type="text"
                     value={form.features}
                     onChange={(e) => setForm({ ...form, features: e.target.value })}
-                    className="w-full px-5 py-3.5 rounded-xl input-glass outline-none text-sm placeholder-white/10"
+                    className="w-full px-5 py-3.5 rounded-xl input-glass outline-none text-sm"
                     placeholder="Auto-Response, CRM Sync..."
                   />
+                </div>
+              </div>
+
+              <div className="border-t border-white/10 pt-8">
+                <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+                  <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-[#ffd700]/80">Buyer Enablement Specifications</h3>
+                  <button
+                    type="button"
+                    onClick={applyPlatformSpecsTemplate}
+                    className="px-4 py-2 rounded-lg border border-[#ffd700]/30 bg-[#ffd700]/10 text-[#ffd700] text-[10px] font-bold uppercase tracking-widest hover:bg-[#ffd700]/20 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!selectedPlatformTemplate}
+                    title={!selectedPlatformTemplate ? 'Supported: WhatsApp, Telegram, Discord, Email' : `Apply ${form.platform} setup template`}
+                  >
+                    Auto-fill Platform Setup
+                  </button>
+                </div>
+                {!selectedPlatformTemplate && (
+                  <p className="text-[11px] text-white/35 mb-4">
+                    Choose WhatsApp, Telegram, Discord, or Email to enable one-click guided setup templates.
+                  </p>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-[10px] font-bold text-white/30 uppercase tracking-widest mb-2">Prerequisites</label>
+                    <textarea
+                      value={form.prerequisites}
+                      onChange={(e) => setForm({ ...form, prerequisites: e.target.value })}
+                      rows={4}
+                      className="w-full px-5 py-3.5 rounded-xl input-glass outline-none text-sm resize-none"
+                      placeholder="One per line, e.g. WhatsApp account, API key, webhook URL"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-white/30 uppercase tracking-widest mb-2">Setup Steps</label>
+                    <textarea
+                      value={form.setup_steps}
+                      onChange={(e) => setForm({ ...form, setup_steps: e.target.value })}
+                      rows={4}
+                      className="w-full px-5 py-3.5 rounded-xl input-glass outline-none text-sm resize-none"
+                      placeholder="One per line, e.g. Import project, configure env, run npm install"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-white/30 uppercase tracking-widest mb-2">Usage Guide</label>
+                    <textarea
+                      value={form.usage_instructions}
+                      onChange={(e) => setForm({ ...form, usage_instructions: e.target.value })}
+                      rows={3}
+                      className="w-full px-5 py-3.5 rounded-xl input-glass outline-none text-sm resize-none"
+                      placeholder="Explain how buyers should operate this bot after setup"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-white/30 uppercase tracking-widest mb-2">Support Contact</label>
+                    <input
+                      type="text"
+                      value={form.support_contact}
+                      onChange={(e) => setForm({ ...form, support_contact: e.target.value })}
+                      className="w-full px-5 py-3.5 rounded-xl input-glass outline-none text-sm"
+                      placeholder="Email, Telegram, Discord, or support URL"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-white/30 uppercase tracking-widest mb-2">Documentation URL</label>
+                    <input
+                      type="url"
+                      value={form.docs_link}
+                      onChange={(e) => setForm({ ...form, docs_link: e.target.value })}
+                      className="w-full px-5 py-3.5 rounded-xl input-glass outline-none text-sm"
+                      placeholder="https://docs.example.com/bot"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-white/30 uppercase tracking-widest mb-2">Demo URL</label>
+                    <input
+                      type="url"
+                      value={form.demo_link}
+                      onChange={(e) => setForm({ ...form, demo_link: e.target.value })}
+                      className="w-full px-5 py-3.5 rounded-xl input-glass outline-none text-sm"
+                      placeholder="https://demo.example.com"
+                    />
+                  </div>
                 </div>
               </div>
 

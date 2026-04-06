@@ -1,0 +1,95 @@
+--- a/front-end/src/pages/VibeCode.jsx
++++ b/front-end/src/pages/VibeCode.jsx
+@@ -7,12 +7,12 @@ import { useAuth } from '../context/AuthContext';
+ 
+ const BUILD_STEPS = [
+-  'Analyzing your prompt and extracting bot intent...',
+-  'Choosing full-stack architecture and folder structure...',
+-  'Generating backend API + frontend client scaffolding...',
+-  'Validating scripts, dependencies, and startup flow...',
+-  'Packaging workspace files for editor preview...',
++  '🔍 Analyzing your vision and bot features...',
++  '🏗️ Designing the perfect stack and structure...',
++  '⚙️ Crafting backend APIs and frontend scaffolding...',
++  '✅ Quality checks and dependency validation...',
++  '📦 Packaging everything you need to run it...',
+ ];
+ 
+ const SESSION_STORAGE_PREFIX = 'botify:vibe-session';
+@@ -66,7 +66,7 @@ export default function VibeCode() {
+   const [chatHistory, setChatHistory] = useState([
+     {
+       role: 'assistant',
+-      content:
+-        'Welcome to Isolated Workspace. Describe the bot you want, and I will generate a runnable project file system.',
++      content:
++        '👋 Hey there! I\'m Vibe Coder, your AI bot architect. Tell me what kind of bot you\'d like to build—what platform, what it should do, and I\'ll generate a complete, ready-to-run project for you. Let\'s create something awesome! 🚀',
+     },
+   ]);
+   const [message, setMessage] = useState('');
+@@ -76,8 +76,7 @@ export default function VibeCode() {
+   const [selectedFilePath, setSelectedFilePath] = useState(INITIAL_FILES[0].path);
+   const [terminalLogs, setTerminalLogs] = useState([
+-    '[workspace] Isolated workspace initialized.',
+-    '[workspace] Awaiting instructions...',
++    '✨ Workspace ready! Waiting for your creative prompt...',
+   ]);
+   const [credits, setCredits] = useState(null);
+@@ -577,9 +576,9 @@ export default function VibeCode() {
+       try {
+         await vibeCodeAPI.deleteSession();
+       } catch (error) {
+         console.error('Failed to delete session:', error);
+       }
+
+       setChatHistory([
+@@ -587,8 +586,8 @@ export default function VibeCode() {
+           {
+             role: 'assistant',
+-            content:
+-              'Welcome to Isolated Workspace. Describe the bot you want, and I will generate a runnable project file system.',
++            content:
++              '👋 Fresh start! I\'m ready to build something new. What bot would you like to create? 🎨',
+           },
+         ]);
+         setFiles(INITIAL_FILES);
+         setSelectedFilePath(INITIAL_FILES[0].path);
+         setTerminalLogs([
+-          '[workspace] Isolated workspace initialized.',
+-          '[workspace] Awaiting instructions...',
++          '✨ Workspace ready! Waiting for your creative prompt...',
+         ]);
+@@ -606,9 +605,9 @@ export default function VibeCode() {
+     <div className="h-screen bg-[#070b13] text-gray-100 px-4 py-4 overflow-hidden">
+       <div className="h-full flex flex-col gap-4">
+         <header className="rounded-2xl border border-white/10 bg-[#0b111a]/95 px-4 py-3 flex items-center justify-between">
+           <div className="flex items-center gap-3">
+             <div className="text-lg font-black tracking-tight">Vibe Coder</div>
+             <span className="text-xs text-white/45">Build full-stack bots by chatting</span>
+@@ -644,10 +643,11 @@ export default function VibeCode() {
+           </div>
+         </section>
+
+         {hasSubmittedPrompt ? (
+-        <div className="flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-2 gap-4">
+-        <section className="h-full rounded-2xl border border-cyan-400/20 bg-[#0b1018]/95 shadow-[0_0_40px_rgba(24,120,170,0.12)] flex flex-col">
++        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-4 auto-rows-fr">
++        <section className="rounded-2xl border border-cyan-400/20 bg-[#0b1018]/95 shadow-[0_0_40px_rgba(24,120,170,0.12)] flex flex-col min-h-0">
+           <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
+             <div>
+               <h1 className="text-sm md:text-base font-semibold">Isolated Workspace Chat</h1>
+@@ -675,17 +675,17 @@ export default function VibeCode() {
+           </div>
+         </section>
+
+-        <section className="h-full rounded-2xl border border-cyan-400/20 bg-[#0a0f17]/95 shadow-[0_0_40px_rgba(24,120,170,0.12)] overflow-hidden flex flex-col">
+-          <div className="h-[70%] min-h-0 border-b border-white/10 flex">
+-            <aside className="w-56 border-r border-white/10 bg-[#0d1420] flex flex-col">
++        <section className="rounded-2xl border border-cyan-400/20 bg-[#0a0f17]/95 shadow-[0_0_40px_rgba(24,120,170,0.12)] overflow-hidden flex flex-col min-h-0">
++          <div className="flex-1 min-h-0 border-b border-white/10 flex overflow-hidden">
++            <aside className="w-56 border-r border-white/10 bg-[#0d1420] flex flex-col overflow-hidden">
+               <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-white/60 border-b border-white/10">
+                 Files
+               </div>
+               <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                 {files.map((file) => (
