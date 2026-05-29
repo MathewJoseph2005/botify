@@ -641,7 +641,7 @@ const CreateMarketplaceBotPage = () => {
                       <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={() => handlePublish(l.id, l.status !== 'published')} className="text-[10px] font-bold text-white/40 hover:text-[#ffd700] uppercase tracking-widest">{l.status === 'published' ? 'Recall' : 'Deploy'}</button>
                         <button onClick={() => handleEdit(l)} className="text-[10px] font-bold text-white/40 hover:text-white uppercase tracking-widest">Adjust</button>
-                        <button onClick={() => setDeleteModal({ open: false, id: l.id })} className="text-[10px] font-bold text-red-400/40 hover:text-red-400 uppercase tracking-widest">Purge</button>
+                        <button onClick={() => setDeleteModal({ open: true, id: l.id })} className="text-[10px] font-bold text-red-400/40 hover:text-red-400 uppercase tracking-widest">Purge</button>
                       </div>
                     </td>
                   </tr>

@@ -182,9 +182,6 @@ const BuyerDashboard = () => {
                <Link to="/email-forwarding" className="text-[10px] font-bold px-4 py-1.5 rounded-full border border-white/10 text-white/40 hover:text-white hover:bg-white/5 transition-all flex items-center gap-2">
                  <span>📩</span> Forwarding
                </Link>
-               <Link to="/email-bot" className="text-[10px] font-bold px-4 py-1.5 rounded-full bg-[#ffd700] text-[#050505] hover:scale-105 transition-all">
-                 {t('buyer.createBot')}
-               </Link>
             </div>
           </div>
           <div className="p-2">
@@ -192,8 +189,8 @@ const BuyerDashboard = () => {
               bots={bots}
               loading={loading}
               emptyMessage="Hyper-automation starts here. Deploy your first bot."
-              emptyLinkText="Get Started"
-              emptyLinkTo="/email-bot"
+              emptyLinkText="Browse Marketplace"
+              emptyLinkTo="/marketplace"
               showManage={true}
             />
           </div>

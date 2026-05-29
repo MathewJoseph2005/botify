@@ -170,7 +170,7 @@ const Navbar = () => {
   const logoTarget = isAuthenticated ? '/dashboard' : '/';
 
   const links = [
-    ...NAV_PUBLIC,
+    ...(isAuthenticated ? NAV_PUBLIC.filter((item) => item.to !== '/faq') : NAV_PUBLIC),
     ...(isAuthenticated
       ? NAV_AUTH.filter((item) => !item.roles || item.roles.includes(user?.role_id))
       : []),

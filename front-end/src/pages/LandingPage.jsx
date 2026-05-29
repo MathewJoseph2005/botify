@@ -5,6 +5,7 @@ import CSSOrb from '../components/CSSOrb';
 import GlassCard from '../components/GlassCard';
 import Logo from '../components/Logo';
 import StarfieldCanvas from '../components/StarfieldCanvas';
+import { useLanguage } from '../context/LanguageContext';
 
 const featuresList = [
   { role: 'Global', label: 'Market Reach', heading: 'Omnichannel Deployment', footer: 'WhatsApp, Telegram, Discord.', icon: <Globe className="w-5 h-5" /> },
@@ -123,6 +124,17 @@ const STYLES = `
 `;
 
 export default function LandingPage() {
+  const { language, changeLanguage, t } = useLanguage();
+  const [langMenuOpen, setLangMenuOpen] = useState(false);
+
+  const languages = [
+    { code: 'en', name: 'English', flag: 'GB' },
+    { code: 'es', name: 'Espanol', flag: 'ES' },
+    { code: 'hi', name: 'Hindi', flag: 'IN' },
+    { code: 'ml', name: 'Malayalam', flag: 'IN' },
+    { code: 'ta', name: 'Tamil', flag: 'IN' },
+  ];
+
   return (
     <div className="relative min-h-screen bg-[#020202] overflow-x-hidden text-white antialiased selection:bg-[#ffd700] selection:text-black">
       <style>{STYLES}</style>
@@ -152,13 +164,42 @@ export default function LandingPage() {
             </Link>
             <div className="hidden lg:flex items-center gap-12 text-[11px] font-black uppercase tracking-[0.2em] text-white/40">
               <a href="#features" className="hover:text-[#ffd700] transition-colors">Features</a>
-              <Link to="/marketplace" className="hover:text-[#ffd700] transition-colors">Marketplace</Link>
+              <Link to="/marketplace" className="hover:text-[#ffd700] transition-colors">{t('nav.marketplace')}</Link>
               <a href="#about" className="hover:text-[#ffd700] transition-colors">Core Tech</a>
-              <button className="hover:text-[#ffd700] transition-colors flex items-center gap-1">EN <ChevronDown className="w-3 h-3" /></button>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setLangMenuOpen((prev) => !prev)}
+                  className="hover:text-[#ffd700] transition-colors flex items-center gap-1"
+                >
+                  {language.toUpperCase()} <ChevronDown className="w-3 h-3" />
+                </button>
+                {langMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-44 rounded-xl border border-white/10 bg-[#0b0b0b]/95 backdrop-blur-lg overflow-hidden z-50">
+                    {languages.map((lang) => (
+                      <button
+                        key={lang.code}
+                        type="button"
+                        onClick={() => {
+                          changeLanguage(lang.code);
+                          setLangMenuOpen(false);
+                        }}
+                        className={`w-full px-3 py-2 text-left text-[12px] transition-all ${
+                          language === lang.code
+                            ? 'text-[#ffd700] bg-white/10'
+                            : 'text-white/70 hover:text-white hover:bg-white/5'
+                        }`}
+                      >
+                        {lang.flag} {lang.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2">
-              <Link to="/login" className="px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-all">Sign In</Link>
-              <Link to="/signup" className="px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-[0.15em] text-[#050505] bg-[#ffd700] shadow-[0_4px_30px_rgba(255,215,0,0.25)] hover:scale-[1.03] transition-all">Get Started</Link>
+              <Link to="/login" className="px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-all">{t('nav.login')}</Link>
+              <Link to="/signup" className="px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-[0.15em] text-[#050505] bg-[#ffd700] shadow-[0_4px_30px_rgba(255,215,0,0.25)] hover:scale-[1.03] transition-all">{t('nav.signup')}</Link>
             </div>
           </div>
         </nav>
